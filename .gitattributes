@@ -1,0 +1,14 @@
+# Normalización de finales de línea: LF en el repositorio, CRLF al
+# comprobar en Windows. Evita que cada commit ensucie el diff.
+* text=auto eol=lf
+
+# Archivos binarios
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
