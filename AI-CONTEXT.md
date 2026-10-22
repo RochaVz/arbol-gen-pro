@@ -18,7 +18,7 @@ Este documento establece las reglas arquitectónicas y convenciones que deben re
 
 ### 1.2 Privacidad por Diseño
 - Los árboles son **privados por defecto**. No existe concepto de "árbol público".
-- Compartir requiere invitación explográtea explícite y aceptación.
+- Compartir requiere invitación explícita y aceptación.
 - Los permisos se validan **siempre en el servidor** (RLS).
 - **Nunca** filtrar datos por permisos solo en el frontend.
 
@@ -28,14 +28,14 @@ Este documento establece las reglas arquitectónicas y convenciones que deben re
 - Cualquier operación sensible usa Edge Functions / Supabase Functions.
 
 ### 1.4 Idempotencia en Sincronización
-- Cada operación en la cola de sincronización lleva un **ID único global** (UUID v7 o similar).
-- El servidor debe poder recibir la misma operación múlttiples veces sin efectos secaciaís.
-- **Nunca** confiar en "última escritura gana" sin vector de versión.
+- Cada operación en la cola de sincronización lleva un **`operationId` único global** (UUID v7 o similar).
+- El servidor debe poder recibir la misma operación múltiples veces sin efectos secundarios.
+- **Nunca** aplicar Last-Write-Wins: ante una divergencia de `serverVersion` el conflicto se resuelve de forma manual.
 
 ### 1.5 No Fusión Automática de Personas
 - **Prohibido** fusionar personas basándose solo en nombres, fechas o fotografías.
 - La fusión es una acción **manual y explícita** del usuario con confirmación.
-- Las sugerencias de duplings son solo eso: sugerencias.
+- Las sugerencias de duplicados son solo eso: sugerencias.
 
 ---
 
@@ -77,13 +77,14 @@ src/
 
 ## 4. Flujo de Sincronización (Resumen)
 
-1. Usuario edita → escritura en Dexie (optimistic) → evento `DomainEvent` en cola `outbox`.
-2. `SyncEngine` procesa cola cada 30s o al detectar online.
-3. Envía batch a Edge Function `/sync` con array de eventos.
-4. Edge Function valida permisos (RLS), aplica en Postgres, resuelve conflictos.
-5. Respuesta: `{ accepted: string[], conflicts: Conflict[], errors: Error[] }`.
-6. Cliente actualiza `syncStatus` y `version` en Dexie según respuesta.
-7. Conflictos → UI de resolución manual (nunca auto-merge).
+1. Usuario edita → escritura en Dexie (optimistic) → operación `SyncOperation` en la cola `syncOutbox`.
+2. La escritura de la entidad y la encolado de la operación ocurren en la **misma transacción**.
+3. `SyncEngine` procesa la cola cada 30 s o al detectar online.
+4. Envía la operación a la Edge Function `/sync`. **Una operación por petición**: el reintento de una operación no reintenta las demás.
+5. Edge Function valida permisos (RLS), comprueba idempotencia por `operationId` y versión, y aplica en Postgres.
+6. Respuesta: `{ status: 'applied' | 'alreadyProcessed' | 'conflict' | 'error', operationId, serverVersion?, conflict? }`.
+7. Cliente actualiza `syncStatus` y, solo con ACK, `serverVersion`.
+8. Conflictos → UI de resolución manual (nunca auto-merge).
 
 ---
 

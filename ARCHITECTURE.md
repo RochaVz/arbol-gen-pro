@@ -77,54 +77,63 @@ type Result<T, E = Error> =
 ### Entity Pattern
 ```typescript
 interface BaseEntity {
-  id: string;           // UUID v7
+  id: string;              // UUID v7
   createdAt: number;
   updatedAt: number;
-  version: number;
+  serverVersion: number;   // Solo el servidor lo incrementa
+  localRevision: number;   // Solo el cliente lo incrementa
   syncStatus: 'synced' | 'pending' | 'conflict' | 'error';
+  deletedAt: number | null; // Tombstone. null = la entidad existe
   localOnly?: boolean;
 }
 ```
 
-### Event Pattern (Synchronization)
+### Operation Pattern (Sincronización)
+
+La cola local guarda operaciones, no eventos de dominio. Los nombres de campo son
+los mismos que en `DATA-MODEL.md` y `SYNC-ARCHITECTURE.md` §5.2.
+
 ```typescript
-interface DomainEvent<T = unknown> {
-  eventId: string;
+interface SyncOperation {
+  operationId: string;        // UUID v7. Clave primaria e idempotencia
   entityType: string;
   entityId: string;
-  operation: 'create' | 'update' | 'delete';
-  payload: T;
-  timestamp: number;
-  userId: string;
-  vectorClock?: Record<string, number>;
+  operationType: 'create' | 'update' | 'delete';
+  baseServerVersion: number;  // Versión del servidor sobre la que se hizo el cambio
+  payload: Record<string, unknown> | null;
+  createdAt: number;          // Informativo: el orden real lo fijan la cola y dependsOn
+  status: 'pending' | 'in_flight' | 'confirmed' | 'failed' | 'blocked';
+  retryCount: number;
+  lastError: string | null;
+  dependsOn: string[];        // operationIds que deben confirmarse antes
 }
 ```
 
 ## Flujo de Datos
 
 1. **Usuario edita** → componente emite mutación local (optimistic update)
-2. **Mutación guardada** → IndexedDB (Dexie) con `version` incrementada
-3. **Sync Engine** → detecta cambio, envía a cola `outbox`
-4. **Edge Function** → valida permisos (RLS), aplica en Postgres
-5. **Conflicto?** → Si versión no coincide, se dispara resolución
-6. **Respuesta** → Client actualiza `syncStatus` y `version`
+2. **Mutación guardada** → IndexedDB (Dexie) en una **única transacción** con la operación de sync, incrementando `localRevision` (nunca `serverVersion`)
+3. **Sync Engine** → envía a la cola `syncOutbox` una operación con `operationId` y `baseServerVersion`
+4. **Edge Function** → valida permisos (RLS), comprueba idempotencia y versión, aplica en Postgres
+5. **Conflicto?** → si `baseServerVersion` ≠ `serverVersion`, se dispara la resolución
+6. **Respuesta** → el cliente actualiza `syncStatus` y, solo con ACK, `serverVersion`
 
 ## Cola de Sincronización
 
-- **Ubicación**: `src/shared/store/syncOutbox` (IndexedDB)
-- **Estructura**: Array de `DomainEvent` con `id` único (UUID v7)
-- **Procesamiento**: `SyncEngine.processBatch()` cada 30s o al reconectar
-- **Reintentos**: Backoff exponencial (max 5 intentos)
-- **Idempotencia**: Cada evento tiene `eventId` único; re-procesar = no-op
+- **Ubicación**: store Dexie `syncOutbox` (`core/db/schema.ts`)
+- **Estructura**: operaciones `SyncOperation` con `operationId` único (UUID v7) como clave primaria
+- **Procesamiento**: `SyncEngine` cada 30 s o al reconectar
+- **Reintentos**: Backoff exponencial con jitter (max 5 intentos)
+- **Idempotencia**: Cada operación tiene `operationId` único; re-procesarla = no-op (`alreadyProcessed`)
+- **Atomicidad**: la entidad y su operación se escriben en la misma transacción; nunca hay un cambio visible sin operación asociada
 
 ## Resolución de Conflictos
 
-- **Vector Clock**: Para detectar orden causal entre operaciones concurrentes
-- **Strategies**:
-  - *Last-Write-Wins*: Si version del servidor > versión local
-  - *Merge Manual*: UI para elegir versión ganadora
-  - *Reject Local*: Si local está desactualizado
+- **Control**: optimista por `serverVersion`, verificado por el servidor
+- **Estrategia**: *siempre manual*. El usuario compara su versión con la del servidor y decide
+- **Nunca Last-Write-Wins**: sobrescribir la versión del servidor automáticamente es incompatible con el principio P6
 - **No Auto-Merge**: Nunca se fusionan personas basándose solo en similitud
+- **Detalle completo**: `SYNC-ARCHITECTURE.md` §11
 
 ## PWA y Offline-First
 
