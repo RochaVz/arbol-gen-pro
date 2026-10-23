@@ -31,6 +31,14 @@
 // Base entity interface shared across all stores
 export type SyncStatus = 'synced' | 'pending' | 'conflict' | 'error';
 
+export type LifeStatus = 'alive' | 'deceased' | 'unknown';
+
+export type OperationType = 'create' | 'update' | 'delete';
+export type OperationStatus = 'pending' | 'in_flight' | 'confirmed' | 'failed' | 'blocked';
+export type EntityType =
+  | 'tree' | 'person' | 'relationship' | 'event' | 'photo'
+  | 'treeMembership' | 'treeInvitation';
+
 export interface BaseEntity {
   id: string;  // UUID v7
   createdAt: number;
@@ -68,17 +76,23 @@ export interface Person extends BaseEntity {
 // Relationship store - Family relationships
 export interface Relationship extends BaseEntity {
   treeId: string;
-  personId: string;       // The person this relationship is about
-  relativeId: string;     // The related person
-  type: 'parent' | 'child' | 'spouse' | 'sibling' | 'grandparent' | 'grandchild' | 'other';
-  degree?: number;        // Generation distance
+  personId?: string;
+  relativeId?: string;
+  person1Id?: string;
+  person2Id?: string;
+  type: string;
+  degree?: number;
+  startDate?: PartialDate;
+  endDate?: PartialDate;
 }
 
 // Event store - Life events
 export interface Event extends BaseEntity {
   treeId: string;
-  personId: string;
-  type: 'birth' | 'death' | 'marriage' | 'divorce' | 'burial' | 'christening' | 'other';
+  personId?: string;
+  personIds?: string[];
+  type: string;
+  title?: string;
   date?: PartialDate;
   place?: Place;
   description?: string;
@@ -87,24 +101,37 @@ export interface Event extends BaseEntity {
 // Photo store - Family photos
 export interface Photo extends BaseEntity {
   treeId: string;
-  personId?: string;      // Associated person (portrait), null if tree-level
-  eventId?: string;       // Associated event (wedding, etc.)
-  url: string;            // Cloudflare R2 URL (signed)
+  personId?: string;
+  eventId?: string;
+  url?: string;
   thumbnailUrl?: string;
+  r2Key?: string;
+  kind?: 'original' | 'optimized' | 'thumbnail';
+  width?: number;
+  height?: number;
+  mimeType?: string;
+  sizeBytes?: number;
+  size?: number;
+  isPrimary?: boolean;
+  isMain?: boolean;
+  capturedAt?: number;
+  uploadedAt?: number;
   description?: string;
-  uploadedAt: number;
-  isMain?: boolean;       // Is this the main portrait photo?
+  exif?: Record<string, string | number>;
 }
 
-// Sync operation store - Synchronization queue
-export interface SyncOperation extends BaseEntity {
-  entityType: 'tree' | 'person' | 'relationship' | 'event' | 'photo';
-  entityId: string;
-  status: 'synced' | 'pending' | 'conflict' | 'error';
+export interface SyncOperation {
   operationId: string;
+  entityType: EntityType;
+  entityId: string;
+  operationType: OperationType;
   baseServerVersion: number;
-  dependsOn?: string[];
-  payload?: any;
+  payload: Record<string, unknown> | null;
+  createdAt: number;
+  status: OperationStatus;
+  retryCount: number;
+  lastError: string | null;
+  dependsOn: string[];
 }
 
 // Tree memberships - User permissions on trees
@@ -112,16 +139,23 @@ export interface TreeMembership extends BaseEntity {
   treeId: string;
   userId: string;
   role: 'owner' | 'admin' | 'editor' | 'viewer' | 'commenter';
-  joinedAt: number;
+  invitedBy?: string;
+  acceptedAt?: number;
+  joinedAt?: number;
 }
 
 // Tree invitations - Pending invitations
 export interface TreeInvitation extends BaseEntity {
   treeId: string;
-  email: string;
+  email?: string;
+  invitedEmail?: string;
+  role: 'owner' | 'admin' | 'editor' | 'viewer' | 'commenter';
   tokenHash: string;
   expiresAt: number;
-  accepted: boolean;
+  accepted?: boolean;
+  acceptedAt?: number;
+  acceptedBy?: string;
+  revokedAt?: number;
 }
 
 // Photo blobs - Local image data (optimized versions)
