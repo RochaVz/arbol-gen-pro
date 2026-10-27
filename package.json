@@ -12,6 +12,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.118.0",
     "browser-image-compression": "^2.0.2",
     "dexie": "^4.4.6",
     "react": "^19.2.8",

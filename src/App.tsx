@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { db, personRepository, relationshipRepository, eventRepository, treeRepository, uuidv7 } from './core/db';
 import type { Person, Relationship, Event, Tree, SyncOperation } from './core/db';
 import { useSyncStatus } from './shared/hooks/useSyncStatus';
+import { supabase } from './core/supabase';
 
 type Tab = 'trees' | 'persons' | 'relationships' | 'events' | 'sync';
 
@@ -17,6 +18,39 @@ export default function App() {
   const [treeId, setTreeId] = useState('');
   const [msg, setMsg] = useState<string | null>(null);
   const [conflictOps, setConflictOps] = useState<SyncOperation[] | null>(null);
+
+  const [sessionEmail, setSessionEmail] = useState<string | null>(null);
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authMsg, setAuthMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!supabase) return;
+    let mounted = true;
+    supabase.auth.getSession().then(({ data }) => {
+      if (mounted) setSessionEmail(data.session?.user?.email ?? null);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
+      setSessionEmail(s?.user?.email ?? null);
+    });
+    return () => { mounted = false; sub.subscription.unsubscribe(); };
+  }, []);
+
+  const doSignIn = async () => {
+    if (!supabase) return;
+    const { error } = await supabase.auth.signInWithPassword({ email: authEmail, password: authPassword });
+    setAuthMsg(error ? error.message : 'Sesion iniciada');
+  };
+  const doSignUp = async () => {
+    if (!supabase) return;
+    const { error } = await supabase.auth.signUp({ email: authEmail, password: authPassword });
+    setAuthMsg(error ? error.message : 'Cuenta creada; revisa tu correo');
+  };
+  const doSignOut = async () => {
+    if (!supabase) return;
+    await supabase.auth.signOut();
+    setAuthMsg('Sesion cerrada');
+  };
 
   const [treeName, setTreeName] = useState('');
   const [pName, setPName] = useState('');
@@ -97,9 +131,23 @@ export default function App() {
   const syncNow = async () => { const r = await sync.syncNow(); setMsg(r.message); await load(); };
   return (
     <div style={{ fontFamily: 'system-ui, sans-serif', padding: 16, maxWidth: 1100, margin: '0 auto' }}>
-      <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, gap: 12 }}>
+      <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, gap: 12, flexWrap: 'wrap' }}>
         <h1 style={{ margin: 0 }}>Arbol Gen Pro</h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          {supabase && !sessionEmail && (
+            <>
+              <input placeholder='email' value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} style={{ width: 160 }} />
+              <input type='password' placeholder='password' value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} style={{ width: 120 }} />
+              <button type='button' onClick={doSignIn}>Entrar</button>
+              <button type='button' onClick={doSignUp}>Registrarse</button>
+            </>
+          )}
+          {supabase && sessionEmail && (
+            <>
+              <span style={{ fontSize: 13, color: '#374151' }}>{sessionEmail}</span>
+              <button type='button' onClick={doSignOut}>Salir</button>
+            </>
+          )}
           <span data-testid='sync-status' style={{ padding: '4px 10px', borderRadius: 999, color: 'white', background: color[sync.status] || '#6b7280', fontSize: 14 }}>
             {sync.status}
           </span>
@@ -108,6 +156,7 @@ export default function App() {
       </header>
 
       {msg && <div style={{ marginBottom: 12, padding: 8, background: '#f3f4f6', borderRadius: 6 }}>{msg} <button type='button' onClick={() => setMsg(null)}>x</button></div>}
+      {authMsg && <div style={{ marginBottom: 12, padding: 8, background: '#eff6ff', borderRadius: 6 }}>{authMsg} <button type='button' onClick={() => setAuthMsg(null)}>x</button></div>}
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
         {(['trees', 'persons', 'relationships', 'events', 'sync'] as Tab[]).map((t) => (
@@ -223,6 +272,14 @@ export default function App() {
           <h2>Cola sync</h2>
           <p>Pendientes: {sync.counts.pending} En vuelo: {sync.counts.inFlight} Fallidas: {sync.counts.failed} Bloqueadas: {sync.counts.blocked} Total: {sync.counts.total}</p>
           <p>Red: {sync.online ? 'online' : 'offline'}</p>
+          {sync.progress && (
+            <div style={{ marginTop: 8 }}>
+              <div style={{ height: 8, background: '#e5e7eb', borderRadius: 4, overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${(sync.progress.done / Math.max(1, sync.progress.total)) * 100}%`, background: '#2563eb', transition: 'width 0.2s' }} />
+              </div>
+              <p style={{ fontSize: 12, color: '#6b7280' }}>{sync.progress.done}/{sync.progress.total}</p>
+            </div>
+          )}
         </section>
       )}
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { readSyncQueueCounts, deriveSyncStatus, syncEngine } from '../../core/sync';
-import type { SyncQueueCounts, SyncVisualStatus } from '../../core/sync/syncEngine';
+import type { SyncQueueCounts, SyncVisualStatus, SyncProgress } from '../../core/sync/syncEngine';
 
 export function useSyncStatus() {
   const [counts, setCounts] = useState<SyncQueueCounts>({
@@ -9,6 +9,7 @@ export function useSyncStatus() {
   const [online, setOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [syncing, setSyncing] = useState<boolean>(false);
   const [status, setStatus] = useState<SyncVisualStatus>('synced');
+  const [progress, setProgress] = useState<SyncProgress | null>(null);
 
   const refresh = async () => {
     const c = await readSyncQueueCounts();
@@ -25,10 +26,12 @@ export function useSyncStatus() {
     const handleOffline = () => { setOnline(false); void refresh(); };
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
+    syncEngine.setProgressListener((p) => setProgress(p));
     return () => {
       window.clearInterval(id);
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      syncEngine.setProgressListener(null);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [syncing]);
@@ -44,6 +47,6 @@ export function useSyncStatus() {
     }
   };
 
-  return { status, counts, online, syncing, refresh, syncNow };
+  return { status, counts, online, syncing, progress, refresh, syncNow };
 }
 

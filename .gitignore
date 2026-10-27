@@ -34,3 +34,4 @@ dist-ssr
 .claude/
 .agents/
 .aider*
+.supabase-token

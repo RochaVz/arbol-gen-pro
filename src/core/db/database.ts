@@ -16,6 +16,7 @@ export class Database extends Dexie {
   declare treeMemberships: Table<TreeMembership, string>;
   declare treeInvitations: Table<TreeInvitation, string>;
   declare photoBlobs: Table<PhotoBlob, string>;
+  declare conflictSnapshots: Table<{ operationId: string; server: any; createdAt: number }, string>;
 
   constructor() {
     super('arbol-gen-pro-db');
@@ -31,6 +32,19 @@ export class Database extends Dexie {
       photoBlobs: 'id, photoId, kind'
     });
     this.syncOperations = this.syncOutbox;
+
+    this.version(2).stores({
+      trees: 'id, ownerId, deletedAt',
+      persons: 'id, treeId, deletedAt',
+      relationships: 'id, treeId, deletedAt',
+      events: 'id, treeId, deletedAt',
+      photos: 'id, treeId, personId, deletedAt',
+      syncOutbox: 'operationId, status, [entityType+entityId], createdAt',
+      treeMemberships: 'id, treeId, userId',
+      treeInvitations: 'id, treeId',
+      photoBlobs: 'id, photoId, kind',
+      conflictSnapshots: 'operationId',
+    });
 
     const entityTables: Array<Table<any, string>> = [
       this.trees, this.persons, this.relationships, this.events, this.photos,
