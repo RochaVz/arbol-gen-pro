@@ -12,7 +12,9 @@ export class Database extends Dexie {
   declare events: Table<Event, string>;
   declare photos: Table<Photo, string>;
   declare syncOutbox: Table<SyncOperation, string>;
-  declare syncOperations: Table<SyncOperation, string>;
+  get syncOperations(): Table<SyncOperation, string> {
+    return this.syncOutbox;
+  }
   declare treeMemberships: Table<TreeMembership, string>;
   declare treeInvitations: Table<TreeInvitation, string>;
   declare photoBlobs: Table<PhotoBlob, string>;
@@ -31,7 +33,6 @@ export class Database extends Dexie {
       treeInvitations: 'id, treeId',
       photoBlobs: 'id, photoId, kind'
     });
-    this.syncOperations = this.syncOutbox;
 
     this.version(2).stores({
       trees: 'id, ownerId, deletedAt',

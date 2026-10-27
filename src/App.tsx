@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
-import { db, personRepository, relationshipRepository, eventRepository, treeRepository, uuidv7 } from './core/db';
-import type { Person, Relationship, Event, Tree, SyncOperation } from './core/db';
+import { db, personRepository, relationshipRepository, eventRepository, treeRepository, photoRepository, uuidv7 } from './core/db';
+import type { Person, Relationship, Event, Tree, SyncOperation, Photo } from './core/db';
 import { useSyncStatus } from './shared/hooks/useSyncStatus';
 import { supabase } from './core/supabase';
+import { savePhotoLocally, photoState } from './features/photo/services/photoStorage';
+import { listConflicts, resolveConflictKeepLocal, resolveConflictKeepServer } from './core/sync';
 
-type Tab = 'trees' | 'persons' | 'relationships' | 'events' | 'sync';
+type Tab = 'trees' | 'persons' | 'relationships' | 'events' | 'photos' | 'conflicts' | 'sync';
 
 const color: Record<string, string> = { synced: '#16a34a', pending: '#ca8a04', syncing: '#2563eb', conflict: '#dc2626', error: '#b91c1c', offline: '#6b7280' };
 
@@ -15,9 +17,31 @@ export default function App() {
   const [persons, setPersons] = useState<Person[]>([]);
   const [rels, setRels] = useState<Relationship[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
+  const [photos, setPhotos] = useState<Photo[]>([]);
+  const [conflicts, setConflicts] = useState<any[]>([]);
   const [treeId, setTreeId] = useState('');
   const [msg, setMsg] = useState<string | null>(null);
   const [conflictOps, setConflictOps] = useState<SyncOperation[] | null>(null);
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
+
+  useEffect(() => {
+    const handler = (e: any) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  const installApp = async () => {
+    if (!installPrompt) return;
+    try {
+      await installPrompt.prompt();
+      setInstallPrompt(null);
+    } catch {
+      // ignore
+    }
+  };
 
   const [sessionEmail, setSessionEmail] = useState<string | null>(null);
   const [authEmail, setAuthEmail] = useState('');
@@ -64,6 +88,7 @@ export default function App() {
   const [evTitle, setEvTitle] = useState('');
   const [evPerson, setEvPerson] = useState('');
   const [evYear, setEvYear] = useState('');
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
 
   const load = async () => {
     const t = await treeRepository.list();
@@ -72,6 +97,7 @@ export default function App() {
     setPersons(await personRepository.list());
     setRels(await relationshipRepository.list());
     setEvents(await eventRepository.list());
+    setPhotos(await photoRepository.list());
     await sync.refresh();
   };
 
@@ -121,6 +147,23 @@ export default function App() {
   };
 
   const delEvent = async (id: string) => { await eventRepository.delete(id); setMsg('Evento eliminado'); await load(); };
+  const loadConflicts = async () => {
+    setConflicts(await listConflicts());
+  };
+
+  useEffect(() => {
+    if (tab === 'conflicts') void loadConflicts();
+  }, [tab]);
+  const createPhoto = async () => {
+    if (!treeId) { setMsg('Crea o selecciona un arbol'); return; }
+    if (!photoFile) { setMsg('Selecciona una imagen'); return; }
+    try {
+      await savePhotoLocally({ file: photoFile, treeId });
+      setPhotoFile(null); setMsg('Foto guardada'); await load();
+    } catch (e) {
+      setMsg(String((e as Error)?.message ?? e));
+    }
+  };
 
   const showConflicts = async (entityType: string, entityId: string) => {
     const ops = await db.syncOutbox.where('[entityType+entityId]').equals([entityType, entityId]).toArray();
@@ -134,6 +177,11 @@ export default function App() {
       <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, gap: 12, flexWrap: 'wrap' }}>
         <h1 style={{ margin: 0 }}>Arbol Gen Pro</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          {installPrompt && (
+            <button type='button' onClick={installApp} style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #2563eb', background: '#2563eb', color: 'white', cursor: 'pointer' }}>
+              Instalar app
+            </button>
+          )}
           {supabase && !sessionEmail && (
             <>
               <input placeholder='email' value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} style={{ width: 160 }} />
@@ -159,7 +207,7 @@ export default function App() {
       {authMsg && <div style={{ marginBottom: 12, padding: 8, background: '#eff6ff', borderRadius: 6 }}>{authMsg} <button type='button' onClick={() => setAuthMsg(null)}>x</button></div>}
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-        {(['trees', 'persons', 'relationships', 'events', 'sync'] as Tab[]).map((t) => (
+        {(['trees', 'persons', 'relationships', 'events', 'photos', 'conflicts', 'sync'] as Tab[]).map((t) => (
           <button key={t} type='button' onClick={() => setTab(t)} style={{ padding: '6px 12px', borderRadius: 6, border: tab === t ? '2px solid #2563eb' : '1px solid #d1d5db', background: tab === t ? '#eff6ff' : 'white', cursor: 'pointer' }}>
             {t}
           </button>
@@ -264,6 +312,49 @@ export default function App() {
               </li>
             ))}
           </ul>
+        </section>
+      )}
+
+      {tab === 'photos' && (
+        <section>
+          <h2>Fotos</h2>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+            <input type='file' accept='image/*' onChange={(e) => setPhotoFile(e.target.files?.[0] ?? null)} />
+            <button type='button' onClick={createPhoto}>Guardar foto</button>
+          </div>
+          <ul>
+            {photos.map((p) => (
+              <li key={p.id} style={{ marginBottom: 4 }}>
+                {p.id.slice(0, 8)} {p.width}x{p.height} <span style={{ fontSize: 12, color: '#6b7280' }}>{photoState(p)}</span> {p.r2Key ? '(subida)' : ''}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {tab === 'conflicts' && (
+        <section>
+          <h2>Conflictos</h2>
+          {conflicts.length === 0 && <p>Sin conflictos.</p>}
+          {conflicts.map((c) => (
+            <div key={c.operation.operationId} style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 12, marginBottom: 12 }}>
+              <p><strong>{c.entityType}</strong> {c.entityId}</p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <div>
+                  <h4>Local</h4>
+                  <pre style={{ whiteSpace: 'pre-wrap', fontSize: 11, background: '#f9fafb', padding: 8, borderRadius: 4 }}>{JSON.stringify(c.local, null, 2)}</pre>
+                </div>
+                <div>
+                  <h4>Servidor</h4>
+                  <pre style={{ whiteSpace: 'pre-wrap', fontSize: 11, background: '#f9fafb', padding: 8, borderRadius: 4 }}>{JSON.stringify(c.server, null, 2)}</pre>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                <button type='button' onClick={async () => { await resolveConflictKeepLocal(c.operation.operationId); await loadConflicts(); setMsg('Resuelto: conservar local'); }}>Conservar local</button>
+                <button type='button' onClick={async () => { await resolveConflictKeepServer(c.operation.operationId); await loadConflicts(); setMsg('Resuelto: conservar servidor'); }}>Conservar servidor</button>
+              </div>
+            </div>
+          ))}
         </section>
       )}
 

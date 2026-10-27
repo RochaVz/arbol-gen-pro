@@ -75,7 +75,7 @@ Deno.serve(async (req) => {
 
   // Derivar treeId de cada op y filtrar por acceso.
   const treeIdCache = new Map<string, string | null>();
-  async function deriveTreeId(entityType: string, entityId: string, op: any): Promise<string | null> {
+  async function deriveTreeId(entityType: string, entityId: string): Promise<string | null> {
     if (entityType === 'tree') return entityId;
     const key = `${entityType}:${entityId}`;
     if (treeIdCache.has(key)) return treeIdCache.get(key)!;
@@ -89,7 +89,7 @@ Deno.serve(async (req) => {
 
   const filteredOps: any[] = [];
   for (const op of ops ?? []) {
-    const tid = await deriveTreeId(op.entity_type, op.entity_id, op);
+    const tid = await deriveTreeId(op.entity_type, op.entity_id);
     if (!tid || !treeFilter.has(tid)) continue;
     filteredOps.push(op);
   }
