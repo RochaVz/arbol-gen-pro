@@ -96,7 +96,12 @@ export default function App() {
   };
   const doSignUp = async () => {
     if (!supabase) return;
-    const { error } = await supabase.auth.signUp({ email: authEmail, password: authPassword });
+    const { error } = await supabase.auth.signUp({
+     email: authEmail,
+     password: authPassword,
+     options: { emailRedirectTo: `${window.location.origin}/` },
+   });
+
     setAuthMsg(error ? error.message : 'Cuenta creada; revisa tu correo');
   };
   const doSignOut = async () => {
