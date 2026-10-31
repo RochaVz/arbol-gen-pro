@@ -158,6 +158,15 @@ export interface TreeInvitation extends BaseEntity {
   revokedAt?: number;
 }
 
+export interface AuditLogEntry extends BaseEntity {
+  treeId?: string;
+  entityType: string;
+  entityId?: string;
+  action: 'create' | 'update' | 'delete' | 'share' | 'role_change' | 'invite' | 'revoke';
+  actorId?: string;
+  payload?: Record<string, unknown> | null;
+}
+
 // Photo blobs - Local image data (optimized versions)
 export interface PhotoBlob extends BaseEntity {
   photoId: string;
@@ -165,6 +174,7 @@ export interface PhotoBlob extends BaseEntity {
   blob: Blob;
   size: number;
 }
+
 
 /**
  * PartialDate (Fecha Parcial) - Used for partial dates (birth, death, etc.)

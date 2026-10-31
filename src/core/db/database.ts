@@ -1,8 +1,9 @@
 import { Dexie, type Table } from 'dexie';
 import type {
   Tree, Person, Relationship, Event, Photo, SyncOperation,
-  TreeMembership, TreeInvitation, PhotoBlob
+  TreeMembership, TreeInvitation, PhotoBlob, AuditLogEntry
 } from './schema';
+
 import { uuidv7 } from '../../shared/utils/uuid';
 
 export class Database extends Dexie {
@@ -18,6 +19,9 @@ export class Database extends Dexie {
   declare treeMemberships: Table<TreeMembership, string>;
   declare treeInvitations: Table<TreeInvitation, string>;
   declare photoBlobs: Table<PhotoBlob, string>;
+  declare auditLog: Table<AuditLogEntry, string>;
+
+
   declare conflictSnapshots: Table<{ operationId: string; server: any; createdAt: number }, string>;
 
   constructor() {
@@ -47,10 +51,26 @@ export class Database extends Dexie {
       conflictSnapshots: 'operationId',
     });
 
+    this.version(3).stores({
+      trees: 'id, ownerId, deletedAt',
+      persons: 'id, treeId, deletedAt',
+      relationships: 'id, treeId, deletedAt',
+      events: 'id, treeId, deletedAt',
+      photos: 'id, treeId, personId, deletedAt',
+      syncOutbox: 'operationId, status, [entityType+entityId], createdAt',
+      treeMemberships: 'id, treeId, userId',
+      treeInvitations: 'id, treeId',
+      photoBlobs: 'id, photoId, kind',
+      conflictSnapshots: 'operationId',
+      auditLog: 'id, treeId, entityType, action, createdAt',
+    });
+
+
     const entityTables: Array<Table<any, string>> = [
       this.trees, this.persons, this.relationships, this.events, this.photos,
       this.treeMemberships, this.treeInvitations, this.photoBlobs
     ];
+
     for (const table of entityTables) {
       table.hook('creating', (_primKey, obj) => {
         const now = Date.now();

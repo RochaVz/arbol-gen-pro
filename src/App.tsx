@@ -5,8 +5,20 @@ import { useSyncStatus } from './shared/hooks/useSyncStatus';
 import { supabase } from './core/supabase';
 import { savePhotoLocally, photoState } from './features/photo/services/photoStorage';
 import { listConflicts, resolveConflictKeepLocal, resolveConflictKeepServer } from './core/sync';
+import { startRealtimeSync, stopRealtimeSync } from './core/sync/realtime';
 
-type Tab = 'trees' | 'persons' | 'relationships' | 'events' | 'photos' | 'conflicts' | 'sync';
+
+import { recordAudit, listAudit } from './core/audit/auditService';
+import { exportToJson, exportToGedcom, downloadText } from './features/export/exportService';
+import FamilyTree from './features/tree/components/FamilyTree';
+
+
+
+
+
+type Tab = 'trees' | 'persons' | 'relationships' | 'events' | 'photos' | 'conflicts' | 'sync' | 'tree' | 'audit' | 'export';
+
+
 
 const color: Record<string, string> = { synced: '#16a34a', pending: '#ca8a04', syncing: '#2563eb', conflict: '#dc2626', error: '#b91c1c', offline: '#6b7280' };
 
@@ -20,8 +32,18 @@ export default function App() {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [conflicts, setConflicts] = useState<any[]>([]);
   const [treeId, setTreeId] = useState('');
+  const [treeCenterId, setTreeCenterId] = useState<string>('');
+  const [treeDepth, setTreeDepth] = useState(3);
+  const [treeMode, setTreeMode] = useState<'ancestors' | 'descendants' | 'branch'>('branch');
+
+
+
   const [msg, setMsg] = useState<string | null>(null);
   const [conflictOps, setConflictOps] = useState<SyncOperation[] | null>(null);
+  const [auditEntries, setAuditEntries] = useState<any[]>([]);
+  const [exportTreeId, setExportTreeId] = useState('');
+
+
   const [installPrompt, setInstallPrompt] = useState<any>(null);
 
   useEffect(() => {
@@ -43,7 +65,14 @@ export default function App() {
     }
   };
 
+  useEffect(() => {
+    startRealtimeSync();
+    return () => stopRealtimeSync();
+  }, []);
+
   const [sessionEmail, setSessionEmail] = useState<string | null>(null);
+
+
   const [authEmail, setAuthEmail] = useState('');
   const [authPassword, setAuthPassword] = useState('');
   const [authMsg, setAuthMsg] = useState<string | null>(null);
@@ -207,7 +236,9 @@ export default function App() {
       {authMsg && <div style={{ marginBottom: 12, padding: 8, background: '#eff6ff', borderRadius: 6 }}>{authMsg} <button type='button' onClick={() => setAuthMsg(null)}>x</button></div>}
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-        {(['trees', 'persons', 'relationships', 'events', 'photos', 'conflicts', 'sync'] as Tab[]).map((t) => (
+        {(['trees', 'persons', 'relationships', 'events', 'photos', 'conflicts', 'sync', 'tree', 'audit', 'export'] as Tab[]).map((t) => (
+
+
           <button key={t} type='button' onClick={() => setTab(t)} style={{ padding: '6px 12px', borderRadius: 6, border: tab === t ? '2px solid #2563eb' : '1px solid #d1d5db', background: tab === t ? '#eff6ff' : 'white', cursor: 'pointer' }}>
             {t}
           </button>
@@ -358,7 +389,37 @@ export default function App() {
         </section>
       )}
 
-      {tab === 'sync' && (
+{tab === 'tree' && (
+        <section>
+          <h2>Arbol genealogico</h2>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+            <label>Centro:</label>
+            <select value={treeCenterId} onChange={(e) => setTreeCenterId(e.target.value)}>
+              <option value=''>(seleccionar)</option>
+              {persons.map((p) => <option key={p.id} value={p.id}>{[p.firstName, p.lastName].filter(Boolean).join(' ')}</option>)}
+            </select>
+            <label>Modo:</label>
+            <select value={treeMode} onChange={(e) => setTreeMode(e.target.value as any)}>
+              <option value='branch'>rama (ancestros + descendientes)</option>
+              <option value='ancestors'>ancestros</option>
+              <option value='descendants'>descendientes</option>
+            </select>
+            <label>Profundidad:</label>
+            <input type='number' min={1} max={10} value={treeDepth} onChange={(e) => setTreeDepth(Math.max(1, Math.min(10, Number(e.target.value) || 1)))} style={{ width: 60 }} />
+          </div>
+          <FamilyTree
+            persons={persons}
+            relationships={rels}
+            centerId={treeCenterId || null}
+            depth={treeDepth}
+            mode={treeMode}
+            onSelectPerson={(id) => setTreeCenterId(id)}
+          />
+        </section>
+      )}
+
+
+{tab === 'sync' && (
         <section>
           <h2>Cola sync</h2>
           <p>Pendientes: {sync.counts.pending} En vuelo: {sync.counts.inFlight} Fallidas: {sync.counts.failed} Bloqueadas: {sync.counts.blocked} Total: {sync.counts.total}</p>
@@ -374,7 +435,61 @@ export default function App() {
         </section>
       )}
 
-      {conflictOps && (
+{tab === 'audit' && (
+        <section>
+          <h2>Auditoria (D6)</h2>
+          <button type='button' onClick={async () => {
+            const entries = await listAudit(treeId || undefined);
+            setAuditEntries(entries);
+          }}>Cargar</button>
+          <ul style={{ marginTop: 8 }}>
+            {(auditEntries ?? []).map((e) => (
+              <li key={e.id} style={{ fontSize: 12, marginBottom: 4 }}>
+                {new Date(e.createdAt).toLocaleString()} — {e.action} {e.entityType} {e.entityId?.slice(0, 8)} {e.treeId ? `(arbol ${e.treeId.slice(0, 8)})` : ''}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {tab === 'export' && (
+        <section>
+          <h2>Exportar arbol (D5)</h2>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+            <select value={exportTreeId} onChange={(e) => setExportTreeId(e.target.value)}>
+              <option value=''>(seleccionar arbol)</option>
+              {trees.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+            <button type='button' onClick={async () => {
+              if (!exportTreeId) return;
+              const bundle = {
+                tree: trees.find((t) => t.id === exportTreeId)!,
+                persons: persons.filter((p) => p.treeId === exportTreeId),
+                relationships: rels.filter((r) => r.treeId === exportTreeId),
+                events: events.filter((e) => e.treeId === exportTreeId),
+                exportedAt: new Date().toISOString(),
+              };
+              downloadText(`${exportTreeId}.json`, exportToJson(bundle as any), 'application/json');
+              await recordAudit({ treeId: exportTreeId, entityType: 'tree', entityId: exportTreeId, action: 'create', payload: { kind: 'export_json' } });
+            }}>Exportar JSON</button>
+            <button type='button' onClick={async () => {
+              if (!exportTreeId) return;
+              const bundle = {
+                tree: trees.find((t) => t.id === exportTreeId)!,
+                persons: persons.filter((p) => p.treeId === exportTreeId),
+                relationships: rels.filter((r) => r.treeId === exportTreeId),
+                events: events.filter((e) => e.treeId === exportTreeId),
+                exportedAt: new Date().toISOString(),
+              };
+              downloadText(`${exportTreeId}.ged`, exportToGedcom(bundle as any), 'text/plain');
+              await recordAudit({ treeId: exportTreeId, entityType: 'tree', entityId: exportTreeId, action: 'create', payload: { kind: 'export_gedcom' } });
+            }}>Exportar GEDCOM</button>
+          </div>
+        </section>
+      )}
+
+
+        {conflictOps && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setConflictOps(null)}>
           <div style={{ background: 'white', padding: 16, borderRadius: 8, maxWidth: 600, width: '90%' }} onClick={(e) => e.stopPropagation()}>
             <h3>Operaciones en conflicto</h3>
