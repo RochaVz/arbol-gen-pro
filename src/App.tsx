@@ -18,6 +18,20 @@ import FamilyTree from './features/tree/components/FamilyTree';
 
 type Tab = 'trees' | 'persons' | 'relationships' | 'events' | 'photos' | 'conflicts' | 'sync' | 'tree' | 'audit' | 'export';
 
+const TAB_LABELS: Record<Tab, string> = {
+  trees: '🌳 Árboles',
+  persons: '👤 Personas',
+  relationships: '🔗 Parentelas',
+  events: '📅 Eventos',
+  photos: '📷 Fotos',
+  conflicts: '⚠️ Conflictos',
+  sync: '🔄 Sincronizar',
+  tree: '🌲 Ver árbol',
+  audit: '📜 Historial',
+  export: '📤 Exportar',
+};
+
+
 
 
 const color: Record<string, string> = { synced: '#16a34a', pending: '#ca8a04', syncing: '#2563eb', conflict: '#dc2626', error: '#b91c1c', offline: '#6b7280' };
@@ -207,7 +221,8 @@ export default function App() {
 
   const syncNow = async () => { const r = await sync.syncNow(); setMsg(r.message); await load(); };
   return (
-    <div style={{ fontFamily: 'system-ui, sans-serif', padding: 16, maxWidth: 1100, margin: '0 auto' }}>
+    <div style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", padding: 24, maxWidth: 1100, margin: '0 auto', background: 'linear-gradient(180deg, #FFF7ED 0%, #FFEDD5 100%)', minHeight: '100vh', borderRadius: 0 }}>
+
       <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, gap: 12, flexWrap: 'wrap' }}>
         <h1 style={{ margin: 0 }}>Arbol Gen Pro</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -230,8 +245,8 @@ export default function App() {
               <button type='button' onClick={doSignOut}>Salir</button>
             </>
           )}
-          <span data-testid='sync-status' style={{ padding: '4px 10px', borderRadius: 999, color: 'white', background: color[sync.status] || '#6b7280', fontSize: 14 }}>
-            {sync.status}
+          <span data-testid='sync-status' style={{ padding: '6px 12px', borderRadius: 999, color: 'white', background: color[sync.status] || '#6b7280', fontSize: 14, fontWeight: 600 }}>
+            {sync.status === 'synced' ? '✅ Todo sincronizado' : sync.status === 'pending' ? '⏳ Pendiente' : sync.status === 'syncing' ? '🔄 Sincronizando' : sync.status === 'conflict' ? '⚠️ Conflicto' : sync.status === 'error' ? '❌ Error' : '📴 Sin conexión'}
           </span>
           <button type='button' onClick={syncNow} disabled={sync.syncing}>Sincronizar ahora</button>
         </div>
@@ -244,8 +259,8 @@ export default function App() {
         {(['trees', 'persons', 'relationships', 'events', 'photos', 'conflicts', 'sync', 'tree', 'audit', 'export'] as Tab[]).map((t) => (
 
 
-          <button key={t} type='button' onClick={() => setTab(t)} style={{ padding: '6px 12px', borderRadius: 6, border: tab === t ? '2px solid #2563eb' : '1px solid #d1d5db', background: tab === t ? '#eff6ff' : 'white', cursor: 'pointer' }}>
-            {t}
+          <button key={t} type='button' onClick={() => setTab(t)} style={{ padding: '10px 14px', borderRadius: 12, border: tab === t ? '2px solid #FF6B6B' : '1px solid #FDBA74', background: tab === t ? '#FF6B6B' : 'white', color: tab === t ? 'white' : '#7C2D12', cursor: 'pointer', fontSize: 15, fontWeight: 600, boxShadow: '0 2px 6px rgba(0,0,0,0.08)' }}>
+            {TAB_LABELS[t]}
           </button>
         ))}
       </div>
@@ -301,10 +316,15 @@ export default function App() {
           <h2>Relaciones</h2>
           <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
             <select value={relType} onChange={(e) => setRelType(e.target.value)}>
-              <option value='parent'>parent</option>
-              <option value='child'>child</option>
-              <option value='spouse'>spouse</option>
-              <option value='sibling'>sibling</option>
+              <option value='padre'>Padre de</option>
+              <option value='madre'>Madre de</option>
+              <option value='hijo'>Hijo de</option>
+              <option value='hija'>Hija de</option>
+              <option value='esposo'>Esposo de</option>
+              <option value='esposa'>Esposa de</option>
+              <option value='hermano'>Hermano de</option>
+              <option value='hermana'>Hermana de</option>
+              <option value='otro'>Otro</option>
             </select>
             <select value={relFrom} onChange={(e) => setRelFrom(e.target.value)}>
               <option value=''>de</option>

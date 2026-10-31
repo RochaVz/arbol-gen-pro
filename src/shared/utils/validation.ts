@@ -36,7 +36,8 @@ export function validateRelationship(
   // cycle check for parent/child relationships
   if (from && to && existingEdges) {
     const type = String(rel.type ?? '').toLowerCase();
-    if (type.includes('parent') || type.includes('child')) {
+    if (type.includes('parent') || type.includes('child') || type.includes('padre') || type.includes('madre') || type.includes('hijo') || type.includes('hija')) {
+
       const edges = existingEdges.map((e) => ({ from: e.from, to: e.to }));
       // parent: from is parent of to => edge to->from? We'll treat from->to generically
       if (wouldCreateCycleImport(edges, from, to)) {

@@ -9,6 +9,22 @@ export const V_GAP = 110;
 export type Pt = { x: number; y: number };
 export type Layout = Map<string, Pt>;
 
+function isParentType(t: string): boolean {
+  return t.includes('parent') || t.includes('father') || t.includes('mother') ||
+    t.includes('padre') || t.includes('madre');
+}
+function isChildType(t: string): boolean {
+  return t.includes('child') || t.includes('son') || t.includes('daughter') ||
+    t.includes('hijo') || t.includes('hija');
+}
+function isSpouseType(t: string): boolean {
+  return t.includes('spouse') || t.includes('partner') || t.includes('marriage') ||
+    t.includes('husband') || t.includes('wife') || t.includes('union') ||
+    t.includes('esposo') || t.includes('esposa') || t.includes('pareja') ||
+    t.includes('matrimonio');
+}
+
+
 export function parentsOf(personId: string, rels: Relationship[]): string[] {
   const out: string[] = [];
   for (const r of rels) {
@@ -17,9 +33,9 @@ export function parentsOf(personId: string, rels: Relationship[]): string[] {
     const to = r.person2Id ?? r.relativeId;
     if (!from || !to) continue;
     const t = String(r.type ?? '').toLowerCase();
-    if (t.includes('parent') || t.includes('father') || t.includes('mother')) {
+    if (isParentType(t)) {
       if (to === personId) out.push(from);
-    } else if (t.includes('child') || t.includes('son') || t.includes('daughter')) {
+    } else if (isChildType(t)) {
       if (from === personId) out.push(to);
     }
   }
@@ -34,9 +50,9 @@ export function childrenOf(personId: string, rels: Relationship[]): string[] {
     const to = r.person2Id ?? r.relativeId;
     if (!from || !to) continue;
     const t = String(r.type ?? '').toLowerCase();
-    if (t.includes('parent') || t.includes('father') || t.includes('mother')) {
+    if (isParentType(t)) {
       if (from === personId) out.push(to);
-    } else if (t.includes('child') || t.includes('son') || t.includes('daughter')) {
+    } else if (isChildType(t)) {
       if (to === personId) out.push(from);
     }
   }
@@ -51,13 +67,14 @@ export function spousesOf(personId: string, rels: Relationship[]): string[] {
     const to = r.person2Id ?? r.relativeId;
     if (!from || !to) continue;
     const t = String(r.type ?? '').toLowerCase();
-    if (t.includes('spouse') || t.includes('partner') || t.includes('marriage') || t.includes('husband') || t.includes('wife') || t.includes('union')) {
+    if (isSpouseType(t)) {
       if (from === personId) out.push(to);
       if (to === personId) out.push(from);
     }
   }
   return Array.from(new Set(out));
 }
+
 
 export type Mode = 'ancestors' | 'descendants' | 'branch';
 
