@@ -70,6 +70,8 @@ export interface Person extends BaseEntity {
   deathPlace?: Place;
   biography?: string;
   notes?: string;
+  occupation?: string;
+  characteristics?: string;
   generation?: number;
 }
 

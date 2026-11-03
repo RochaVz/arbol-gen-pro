@@ -1,10 +1,10 @@
 import type { Relationship } from '../../../core/db/schema';
 
 
-export const NODE_W = 120;
-export const NODE_H = 56;
-export const H_GAP = 28;
-export const V_GAP = 110;
+export const NODE_W = 190;
+export const NODE_H = 150;
+export const H_GAP = 40;
+export const V_GAP = 180;
 
 export type Pt = { x: number; y: number };
 export type Layout = Map<string, Pt>;
@@ -78,12 +78,35 @@ export function spousesOf(personId: string, rels: Relationship[]): string[] {
 
 export type Mode = 'ancestors' | 'descendants' | 'branch';
 
+function familyMembers(rootId: string, rels: Relationship[]): string[] {
+  const out = [rootId];
+  for (const s of spousesOf(rootId, rels)) {
+    if (!out.includes(s)) out.push(s);
+  }
+  return out;
+}
+
+function childrenOfFamily(members: string[], rels: Relationship[]): string[] {
+  const set = new Set<string>();
+  for (const m of members) {
+    for (const c of childrenOf(m, rels)) {
+      if (!members.includes(c)) set.add(c);
+    }
+  }
+  return Array.from(set);
+}
+
 export function layoutDescendants(rootId: string, depth: number, rels: Relationship[], pos: Layout, startX = 0, y = 0): number {
-  const kids = depth > 0 ? childrenOf(rootId, rels) : [];
+  const members = familyMembers(rootId, rels);
+  const kids = depth > 0 ? childrenOfFamily(members, rels) : [];
   if (kids.length === 0) {
-    const cx = startX + NODE_W / 2;
-    pos.set(rootId, { x: cx, y: y + NODE_H / 2 });
-    return NODE_W;
+    const groupW = members.length * NODE_W + (members.length - 1) * H_GAP;
+    let cx = startX;
+    for (const m of members) {
+      pos.set(m, { x: cx + NODE_W / 2, y: y + NODE_H / 2 });
+      cx += NODE_W + H_GAP;
+    }
+    return Math.max(groupW, NODE_W);
   }
   let x = startX;
   for (const c of kids) {
@@ -91,9 +114,14 @@ export function layoutDescendants(rootId: string, depth: number, rels: Relations
     x += w + H_GAP;
   }
   const totalW = x - startX - H_GAP;
-  const rootCx = startX + totalW / 2;
-  pos.set(rootId, { x: rootCx, y: y + NODE_H / 2 });
-  return Math.max(totalW, NODE_W);
+  const groupW = members.length * NODE_W + (members.length - 1) * H_GAP;
+  const groupStart = startX + (totalW - groupW) / 2;
+  let cx = groupStart;
+  for (const m of members) {
+    pos.set(m, { x: cx + NODE_W / 2, y: y + NODE_H / 2 });
+    cx += NODE_W + H_GAP;
+  }
+  return Math.max(totalW, groupW, NODE_W);
 }
 
 export function layoutAncestors(rootId: string, depth: number, rels: Relationship[], pos: Layout, startX = 0, y = 0): number {

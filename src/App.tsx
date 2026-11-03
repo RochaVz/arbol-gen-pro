@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { db, personRepository, relationshipRepository, eventRepository, treeRepository, photoRepository, uuidv7 } from './core/db';
+import { personRepository, relationshipRepository, eventRepository, treeRepository, photoRepository, uuidv7 } from './core/db';
 import type { Person, Relationship, Event, Tree, SyncOperation, Photo } from './core/db';
 import { useSyncStatus } from './shared/hooks/useSyncStatus';
 import { supabase } from './core/supabase';
-import { savePhotoLocally, photoState } from './features/photo/services/photoStorage';
+import { savePhotoLocally, photoState, getPhotoBlobs } from './features/photo/services/photoStorage';
 import { listConflicts, resolveConflictKeepLocal, resolveConflictKeepServer } from './core/sync';
 import { startRealtimeSync, stopRealtimeSync } from './core/sync/realtime';
 
@@ -18,18 +18,7 @@ import FamilyTree from './features/tree/components/FamilyTree';
 
 type Tab = 'trees' | 'persons' | 'relationships' | 'events' | 'photos' | 'conflicts' | 'sync' | 'tree' | 'audit' | 'export';
 
-const TAB_LABELS: Record<Tab, string> = {
-  trees: '🌳 Árboles',
-  persons: '👤 Personas',
-  relationships: '🔗 Parentelas',
-  events: '📅 Eventos',
-  photos: '📷 Fotos',
-  conflicts: '⚠️ Conflictos',
-  sync: '🔄 Sincronizar',
-  tree: '🌲 Ver árbol',
-  audit: '📜 Historial',
-  export: '📤 Exportar',
-};
+
 
 
 
@@ -47,8 +36,9 @@ export default function App() {
   const [conflicts, setConflicts] = useState<any[]>([]);
   const [treeId, setTreeId] = useState('');
   const [treeCenterId, setTreeCenterId] = useState<string>('');
-  const [treeDepth, setTreeDepth] = useState(3);
+  const [treeDepth] = useState(3);
   const [treeMode, setTreeMode] = useState<'ancestors' | 'descendants' | 'branch'>('branch');
+  const [personPhotoUrls, setPersonPhotoUrls] = useState<Record<string, string>>({});
 
 
 
@@ -57,6 +47,18 @@ export default function App() {
   const [auditEntries, setAuditEntries] = useState<any[]>([]);
   const [exportTreeId, setExportTreeId] = useState('');
 
+
+  // Asistente para crear el arbol de forma sencilla
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [wizardTreeName, setWizardTreeName] = useState('Mi familia');
+  const [wizardMyName, setWizardMyName] = useState('');
+  const [wizardLastName, setWizardLastName] = useState('');
+
+  // Agregar familiares de forma guiada
+  const [quickAdd, setQuickAdd] = useState<{ personId: string; kind: 'father' | 'mother' | 'spouse' | 'child' } | null>(null);
+  const [quickName, setQuickName] = useState('');
+  const [quickLast, setQuickLast] = useState('');
+  const [quickLife, setQuickLife] = useState<'alive' | 'deceased' | 'unknown'>('alive');
 
   const [installPrompt, setInstallPrompt] = useState<any>(null);
 
@@ -124,10 +126,13 @@ export default function App() {
     setAuthMsg('Sesion cerrada');
   };
 
-  const [treeName, setTreeName] = useState('');
   const [pName, setPName] = useState('');
   const [pLast, setPLast] = useState('');
   const [pLife, setPLife] = useState<'alive' | 'deceased' | 'unknown'>('alive');
+  const [pBirthYear, setPBirthYear] = useState('');
+  const [pOccupation, setPOccupation] = useState('');
+  const [pCharacteristics, setPCharacteristics] = useState('');
+  const [pPhotoFile, setPPhotoFile] = useState<File | null>(null);
   const [editPerson, setEditPerson] = useState<string | null>(null);
   const [relType, setRelType] = useState('parent');
   const [relFrom, setRelFrom] = useState('');
@@ -142,41 +147,185 @@ export default function App() {
     const t = await treeRepository.list();
     setTrees(t);
     if (!treeId && t.length) setTreeId(t[0].id);
-    setPersons(await personRepository.list());
+    const personsList = await personRepository.list();
+    setPersons(personsList);
     setRels(await relationshipRepository.list());
     setEvents(await eventRepository.list());
-    setPhotos(await photoRepository.list());
+    const photoList = await photoRepository.list();
+    setPhotos(photoList);
+
+    // Cargar miniaturas locales para mostrar fotos en el arbol
+    setPersonPhotoUrls((prev) => {
+      Object.values(prev).forEach((u) => { try { URL.revokeObjectURL(u); } catch {} });
+      return {};
+    });
+    const urls: Record<string, string> = {};
+    await Promise.all(personsList.map(async (p) => {
+      const photo = photoList.find((ph) => ph.personId === p.id && !ph.deletedAt);
+      if (!photo) return;
+      try {
+        const blobs = await getPhotoBlobs(photo.id);
+        const thumb = blobs.find((b) => b.kind === 'thumbnail') ?? blobs[0];
+        if (thumb?.blob) urls[p.id] = URL.createObjectURL(thumb.blob);
+      } catch {}
+    }));
+    setPersonPhotoUrls(urls);
+
     await sync.refresh();
   };
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { void load(); }, []);
 
+  useEffect(() => {
+    if (!treeId) { setTreeCenterId(''); return; }
+    const list = persons.filter((p: any) => p.treeId === treeId && !p.deletedAt);
+    if (list.length === 0) { setTreeCenterId(''); return; }
+    if (!treeCenterId || !list.some((p: any) => p.id === treeCenterId)) {
+      setTreeCenterId(list[0].id);
+    }
+  }, [treeId, persons, treeCenterId]);
+
   const inTree = (arr: { treeId?: string }[]) => treeId ? arr.filter((x) => x.treeId === treeId) : arr;
   const personsT = inTree(persons) as Person[];
   const relsT = inTree(rels) as Relationship[];
   const eventsT = inTree(events) as Event[];
 
-  const createTree = async () => {
-    if (!treeName.trim()) { setMsg('Nombre requerido'); return; }
-    await treeRepository.create({ id: uuidv7(), name: treeName.trim(), ownerId: 'local-user' } as any);
-    setTreeName(''); setMsg('Arbol creado'); await load();
+  const startMyTree = async () => {
+    if (!wizardTreeName.trim()) { setMsg('Pon un nombre al arbol'); return; }
+    if (!wizardMyName.trim()) { setMsg('Pon tu nombre'); return; }
+    try {
+      const t = await treeRepository.create({ id: uuidv7(), name: wizardTreeName.trim(), ownerId: 'local-user' } as any);
+      const me = await personRepository.create({ id: uuidv7(), treeId: t.entity.id, firstName: wizardMyName.trim(), lastName: wizardLastName.trim() || undefined, lifeStatus: 'alive' } as any);
+      setTreeId(t.entity.id);
+      setTreeCenterId(me.entity.id);
+      setTab('tree');
+      setWizardOpen(false);
+      setMsg('Arbol creado. Ahora puedes agregar familiares.');
+      await load();
+    } catch (e) {
+      setMsg(String((e as Error)?.message ?? e));
+    }
+  };
+
+  const openQuickAdd = (personId: string, kind: 'father' | 'mother' | 'spouse' | 'child') => {
+    setQuickAdd({ personId, kind });
+    setQuickName('');
+    setQuickLast('');
+    setQuickLife('alive');
+  };
+
+  const closeQuickAdd = () => setQuickAdd(null);
+
+  const quickTitle = (kind: string) => {
+    if (kind === 'father') return 'Agregar padre';
+    if (kind === 'mother') return 'Agregar madre';
+    if (kind === 'spouse') return 'Agregar pareja';
+    return 'Agregar hijo/a';
+  };
+
+  const submitQuickAdd = async () => {
+    if (!quickAdd) return;
+    if (!treeId) { setMsg('Selecciona un arbol'); return; }
+    if (!quickName.trim()) { setMsg('Nombre requerido'); return; }
+    try {
+      const sex = quickAdd.kind === 'father' ? 'male' : quickAdd.kind === 'mother' ? 'female' : undefined;
+      const newPerson = await personRepository.create({
+        id: uuidv7(),
+        treeId,
+        firstName: quickName.trim(),
+        lastName: quickLast.trim() || undefined,
+        lifeStatus: quickLife,
+        sex,
+      } as any);
+
+      const edges = relsT.map((r) => ({ from: r.person1Id ?? r.personId ?? '', to: r.person2Id ?? r.relativeId ?? '' }));
+      let type = 'otro';
+      let from = quickAdd.personId;
+      let to = newPerson.entity.id;
+      if (quickAdd.kind === 'father' || quickAdd.kind === 'mother') {
+        // el nuevo es padre/madre de la persona seleccionada
+        type = quickAdd.kind === 'father' ? 'padre' : 'madre';
+        from = newPerson.entity.id;
+        to = quickAdd.personId;
+      } else if (quickAdd.kind === 'child') {
+        type = 'hijo';
+        from = quickAdd.personId;
+        to = newPerson.entity.id;
+      } else {
+        type = 'pareja';
+        from = quickAdd.personId;
+        to = newPerson.entity.id;
+      }
+      await relationshipRepository.create({ id: uuidv7(), treeId, type, person1Id: from, person2Id: to } as any, edges);
+
+      setMsg('Familiar agregado');
+      setQuickAdd(null);
+      await load();
+    } catch (e) {
+      setMsg(String((e as Error)?.message ?? e));
+    }
   };
 
   const savePerson = async () => {
     if (!treeId) { setMsg('Crea o selecciona un arbol'); return; }
     if (!pName.trim()) { setMsg('Nombre requerido'); return; }
+    const birthDate = pBirthYear.trim() ? { year: Number(pBirthYear.trim()) } : undefined;
     if (editPerson) {
-      await personRepository.update(editPerson, { firstName: pName.trim(), lastName: pLast.trim() || undefined, lifeStatus: pLife } as any);
+      await personRepository.update(editPerson, { firstName: pName.trim(), lastName: pLast.trim() || undefined, lifeStatus: pLife, birthDate, occupation: pOccupation.trim() || undefined, characteristics: pCharacteristics.trim() || undefined } as any);
+      if (pPhotoFile) {
+        try { await savePhotoLocally({ file: pPhotoFile, treeId, personId: editPerson }); } catch (e) { setMsg(String((e as Error)?.message ?? e)); }
+      }
       setMsg('Persona actualizada');
     } else {
-      await personRepository.create({ id: uuidv7(), treeId, firstName: pName.trim(), lastName: pLast.trim() || undefined, lifeStatus: pLife } as any);
+      const created = await personRepository.create({ id: uuidv7(), treeId, firstName: pName.trim(), lastName: pLast.trim() || undefined, lifeStatus: pLife, birthDate, occupation: pOccupation.trim() || undefined, characteristics: pCharacteristics.trim() || undefined } as any);
+      if (pPhotoFile) {
+        try { await savePhotoLocally({ file: pPhotoFile, treeId, personId: created.entity.id }); } catch (e) { setMsg(String((e as Error)?.message ?? e)); }
+      }
       setMsg('Persona creada');
     }
-    setEditPerson(null); setPName(''); setPLast(''); setPLife('alive'); await load();
+    setEditPerson(null); setPName(''); setPLast(''); setPLife('alive'); setPBirthYear(''); setPOccupation(''); setPCharacteristics(''); setPPhotoFile(null); await load();
   };
 
   const delPerson = async (id: string) => { await personRepository.delete(id); setMsg('Persona eliminada'); await load(); };
+
+  const removeDuplicates = async () => {
+    const groups = new Map<string, Person[]>();
+    for (const p of personsT) {
+      const key = `${p.firstName} ${p.lastName ?? ''}`.trim().toLowerCase();
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(p);
+    }
+    const toDelete: Person[] = [];
+    for (const g of groups.values()) {
+      if (g.length > 1) toDelete.push(...g.slice(1));
+    }
+    if (toDelete.length === 0) { setMsg('No se encontraron duplicados'); return; }
+    if (!window.confirm(`Se eliminarán ${toDelete.length} integrantes duplicados. ¿Continuar?`)) return;
+    try {
+      for (const p of toDelete) await personRepository.delete(p.id);
+      setMsg(`${toDelete.length} duplicados eliminados`);
+      await load();
+    } catch (e) {
+      setMsg(String((e as Error)?.message ?? e));
+    }
+  };
+
+  const deleteTree = async (id: string) => {
+    if (!window.confirm('¿Eliminar este árbol y todos sus integrantes?')) return;
+    try {
+      for (const p of persons.filter((x) => x.treeId === id)) await personRepository.delete(p.id);
+      for (const r of rels.filter((x) => x.treeId === id)) await relationshipRepository.delete(r.id);
+      for (const e of events.filter((x) => x.treeId === id)) await eventRepository.delete(e.id);
+      for (const ph of photos.filter((x) => x.treeId === id)) await photoRepository.delete(ph.id);
+      await treeRepository.delete(id);
+      if (treeId === id) setTreeId('');
+      setMsg('Árbol eliminado');
+      await load();
+    } catch (e) {
+      setMsg(String((e as Error)?.message ?? e));
+    }
+  };
 
   const createRel = async () => {
     if (!treeId || !relFrom || !relTo) { setMsg('Datos incompletos'); return; }
@@ -211,12 +360,6 @@ export default function App() {
     } catch (e) {
       setMsg(String((e as Error)?.message ?? e));
     }
-  };
-
-  const showConflicts = async (entityType: string, entityId: string) => {
-    const ops = await db.syncOutbox.where('[entityType+entityId]').equals([entityType, entityId]).toArray();
-    const blocked = ops.filter((o) => o.status === 'blocked' || o.status === 'failed');
-    setConflictOps(blocked.length ? blocked : ops);
   };
 
   const syncNow = async () => { const r = await sync.syncNow(); setMsg(r.message); await load(); };
@@ -256,58 +399,116 @@ export default function App() {
       {authMsg && <div style={{ marginBottom: 12, padding: 8, background: '#eff6ff', borderRadius: 6 }}>{authMsg} <button type='button' onClick={() => setAuthMsg(null)}>x</button></div>}
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-        {(['trees', 'persons', 'relationships', 'events', 'photos', 'conflicts', 'sync', 'tree', 'audit', 'export'] as Tab[]).map((t) => (
-
-
-          <button key={t} type='button' onClick={() => setTab(t)} style={{ padding: '10px 14px', borderRadius: 12, border: tab === t ? '2px solid #FF6B6B' : '1px solid #FDBA74', background: tab === t ? '#FF6B6B' : 'white', color: tab === t ? 'white' : '#7C2D12', cursor: 'pointer', fontSize: 15, fontWeight: 600, boxShadow: '0 2px 6px rgba(0,0,0,0.08)' }}>
-            {TAB_LABELS[t]}
-          </button>
-        ))}
+        <button key='tree' type='button' onClick={() => setTab('tree')} style={{ padding: '12px 20px', borderRadius: 12, border: tab === 'tree' ? '2px solid #E8872E' : '1px solid #D4A373', background: tab === 'tree' ? '#FFF3B0' : '#FFFDF5', color: tab === 'tree' ? '#5C3A21' : '#8B4513', cursor: 'pointer', fontSize: 15, fontWeight: 700, boxShadow: '0 2px 6px rgba(0,0,0,0.08)', fontFamily: 'Georgia, serif' }}>
+          🌲 Árbol
+        </button>
+        <button key='persons' type='button' onClick={() => setTab('persons')} style={{ padding: '12px 20px', borderRadius: 12, border: tab === 'persons' ? '2px solid #E8872E' : '1px solid #D4A373', background: tab === 'persons' ? '#FFF3B0' : '#FFFDF5', color: tab === 'persons' ? '#5C3A21' : '#8B4513', cursor: 'pointer', fontSize: 15, fontWeight: 700, boxShadow: '0 2px 6px rgba(0,0,0,0.08)', fontFamily: 'Georgia, serif' }}>
+          👤 Personas
+        </button>
       </div>
 
       <div style={{ marginBottom: 12 }}>
-        <label style={{ marginRight: 8 }}>Arbol activo:</label>
-        <select value={treeId} onChange={(e) => setTreeId(e.target.value)}>
-          <option value=''>(todos)</option>
+        <label style={{ marginRight: 8, fontWeight: 600, color: '#5C3A21', fontFamily: 'Georgia, serif' }}>Árbol activo:</label>
+        <select value={treeId} onChange={(e) => setTreeId(e.target.value)} style={{ padding: '8px 12px', borderRadius: 10, border: '1px solid #D4A373', background: 'white', fontSize: 14, fontFamily: 'Georgia, serif' }}>
+          <option value=''>(seleccionar árbol)</option>
           {trees.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
         </select>
       </div>
 
       {tab === 'trees' && (
         <section>
-          <h2>Arboles</h2>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-            <input placeholder='Nombre' value={treeName} onChange={(e) => setTreeName(e.target.value)} />
-            <button type='button' onClick={createTree}>Crear arbol</button>
-          </div>
-          <ul>{trees.map((t) => <li key={t.id}>{t.name} <span style={{ fontSize: 12, color: '#6b7280' }}>({t.syncStatus})</span></li>)}</ul>
+          <h2>Mis árboles</h2>
+          {trees.length === 0 && (
+            <div style={{ textAlign: 'center', padding: 40, background: '#FFFDF5', borderRadius: 16, border: '2px solid #D4A373', marginBottom: 20 }}>
+              <p style={{ fontSize: 20, color: '#5C3A21', marginBottom: 16, fontFamily: 'Georgia, serif' }}>¡Bienvenido a tu árbol genealógico!</p>
+              <p style={{ fontSize: 15, color: '#8B4513', marginBottom: 24 }}>Crear tu primer árbol es muy fácil. Solo necesitas un nombre y tu nombre.</p>
+              <button type='button' onClick={() => setWizardOpen(true)} style={{ padding: '14px 28px', fontSize: 17, borderRadius: 12, background: '#E8872E', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 700, fontFamily: 'Georgia, serif', boxShadow: '0 4px 10px rgba(0,0,0,0.15)' }}>
+                Crear mi árbol
+              </button>
+            </div>
+          )}
+          {trees.length > 0 && (
+            <div>
+              <p style={{ fontSize: 15, color: '#5C3A21', marginBottom: 12, fontFamily: 'Georgia, serif' }}>Tus árboles:</p>
+              <ul style={{ listStyle: 'none', padding: 0 }}>
+                {trees.map((t) => (
+                  <li key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 14, background: 'white', borderRadius: 12, border: '1px solid #D4A373', marginBottom: 10, boxShadow: '0 3px 8px rgba(0,0,0,0.08)' }}>
+                    <span style={{ fontSize: 24 }}>{t.syncStatus === 'synced' ? '✅' : t.syncStatus === 'pending' ? '⏳' : '⚠️'}</span>
+                    <span style={{ fontSize: 17, fontWeight: 700, color: '#5C3A21', fontFamily: 'Georgia, serif', flex: 1 }}>{t.name}</span>
+                    <button type='button' onClick={() => { setTreeId(t.id); setTab('tree'); }} style={{ padding: '10px 16px', borderRadius: 10, background: '#FFF3B0', color: '#5C3A21', border: '1px solid #D4A373', cursor: 'pointer', fontWeight: 700, fontSize: 14 }}>
+                      Abrir árbol
+                    </button>
+                    <button type='button' onClick={() => deleteTree(t.id)} style={{ padding: '10px 16px', borderRadius: 10, background: '#F4E1D2', color: '#8B4513', border: '1px solid #D4A373', cursor: 'pointer', fontWeight: 700, fontSize: 14, marginLeft: 8 }}>
+                      Eliminar
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </section>
       )}
 
       {tab === 'persons' && (
         <section>
-          <h2>Personas</h2>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-            <input placeholder='Nombre' value={pName} onChange={(e) => setPName(e.target.value)} />
-            <input placeholder='Apellido' value={pLast} onChange={(e) => setPLast(e.target.value)} />
-            <select value={pLife} onChange={(e) => setPLife(e.target.value as 'alive' | 'deceased' | 'unknown')}>
-              <option value='alive'>vivo</option>
-              <option value='deceased'>fallecido</option>
-              <option value='unknown'>desconocido</option>
-            </select>
-            <button type='button' onClick={savePerson}>{editPerson ? 'Actualizar' : 'Crear'}</button>
-            {editPerson && <button type='button' onClick={() => { setEditPerson(null); setPName(''); setPLast(''); setPLife('alive'); }}>Cancelar</button>}
+          <h2>Personas de la familia</h2>
+          {!treeId && (
+            <div style={{ textAlign: 'center', padding: 30, background: '#FFFDF5', borderRadius: 16, border: '2px solid #D4A373' }}>
+              <p style={{ fontSize: 16, color: '#5C3A21', marginBottom: 16, fontFamily: 'Georgia, serif' }}>Primero selecciona un árbol.</p>
+            </div>
+          )}
+          {treeId && (
+            <>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+                <input placeholder='Nombre' value={pName} onChange={(e) => setPName(e.target.value)} style={{ padding: '10px 14px', borderRadius: 10, border: '1px solid #D4A373', background: 'white', fontSize: 15, minWidth: 140 }} />
+                <input placeholder='Apellido' value={pLast} onChange={(e) => setPLast(e.target.value)} style={{ padding: '10px 14px', borderRadius: 10, border: '1px solid #D4A373', background: 'white', fontSize: 15, minWidth: 140 }} />
+                <input placeholder='Año nacimiento' value={pBirthYear} onChange={(e) => setPBirthYear(e.target.value)} style={{ padding: '10px 14px', borderRadius: 10, border: '1px solid #D4A373', background: 'white', fontSize: 15, width: 130 }} />
+                <input placeholder='Ocupación' value={pOccupation} onChange={(e) => setPOccupation(e.target.value)} style={{ padding: '10px 14px', borderRadius: 10, border: '1px solid #D4A373', background: 'white', fontSize: 15, minWidth: 150 }} />
+                <input placeholder='Características (ej. alegre)' value={pCharacteristics} onChange={(e) => setPCharacteristics(e.target.value)} style={{ padding: '10px 14px', borderRadius: 10, border: '1px solid #D4A373', background: 'white', fontSize: 15, minWidth: 180 }} />
+                <select value={pLife} onChange={(e) => setPLife(e.target.value as 'alive' | 'deceased' | 'unknown')} style={{ padding: '10px 14px', borderRadius: 10, border: '1px solid #D4A373', background: 'white', fontSize: 15 }}>
+                  <option value='alive'>vivo</option>
+                  <option value='deceased'>fallecido</option>
+                  <option value='unknown'>desconocido</option>
+                </select>
+                <input type='file' accept='image/*' onChange={(e) => setPPhotoFile(e.target.files?.[0] ?? null)} style={{ padding: '8px 12px', borderRadius: 10, border: '1px solid #D4A373', background: 'white', fontSize: 14 }} />
+                <button type='button' onClick={savePerson} style={{ padding: '10px 20px', borderRadius: 12, background: '#E8872E', color: 'white', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 15, fontFamily: 'Georgia, serif', boxShadow: '0 3px 8px rgba(0,0,0,0.15)' }}>
+                  {editPerson ? 'Guardar cambios' : 'Crear persona'}
+                </button>
+                <button type='button' onClick={removeDuplicates} style={{ padding: '10px 20px', borderRadius: 12, background: '#F4E1D2', color: '#8B4513', border: '1px solid #D4A373', cursor: 'pointer', fontWeight: 700, fontSize: 14, marginLeft: 8 }}>
+                  Eliminar duplicados
+                </button>
+                {editPerson && (
+                  <button type='button' onClick={() => { setEditPerson(null); setPName(''); setPLast(''); setPLife('alive'); setPBirthYear(''); setPOccupation(''); setPCharacteristics(''); setPPhotoFile(null); }} style={{ padding: '10px 20px', borderRadius: 12, background: '#F4E1D2', color: '#8B4513', border: '1px solid #D4A373', cursor: 'pointer', fontWeight: 700, fontSize: 14 }}>
+                    Cancelar
+                  </button>
+                )}
           </div>
-          <ul>
+          <ul style={{ listStyle: 'none', padding: 0 }}>
             {personsT.map((p) => (
-              <li key={p.id} style={{ marginBottom: 4 }}>
-                {p.firstName} {p.lastName ?? ''} ({p.lifeStatus}) <span style={{ fontSize: 12, color: '#6b7280' }}>{p.syncStatus}</span>
-                {p.syncStatus === 'conflict' && <button type='button' style={{ marginLeft: 8 }} onClick={() => showConflicts('person', p.id)}>Ver conflictos</button>}
-                <button type='button' style={{ marginLeft: 8 }} onClick={() => { setEditPerson(p.id); setPName(p.firstName); setPLast(p.lastName ?? ''); setPLife(p.lifeStatus); }}>Editar</button>
-                <button type='button' style={{ marginLeft: 8 }} onClick={() => delPerson(p.id)}>Eliminar</button>
+              <li key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 14, background: 'white', borderRadius: 12, border: '1px solid #D4A373', marginBottom: 10, boxShadow: '0 3px 8px rgba(0,0,0,0.08)' }}>
+                <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#F4E1D2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, color: '#8B4513', flexShrink: 0 }}>👤</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: 16, color: '#5C3A21', fontFamily: 'Georgia, serif' }}>{p.firstName} {p.lastName ?? ''}</div>
+                  <div style={{ fontSize: 13, color: '#8B4513', fontStyle: 'italic', marginTop: 2 }}>
+                    {p.birthDate?.year ? `n. ${p.birthDate.year}` : ''}{p.deathDate?.year ? ` – ${p.deathDate.year}` : ''}
+                    {p.occupation ? ` • ${p.occupation}` : ''}
+                    {p.characteristics ? ` • "${p.characteristics}"` : ''}
+                  </div>
+                  <div style={{ fontSize: 11, color: '#8B4513', marginTop: 4 }}>{p.lifeStatus === 'deceased' ? '✝ Fallecido' : p.lifeStatus === 'alive' ? '💚 Vivo' : '❓ Desconocido'}</div>
+                </div>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  <button type='button' onClick={() => { setEditPerson(p.id); setPName(p.firstName); setPLast(p.lastName ?? ''); setPLife(p.lifeStatus); setPBirthYear(p.birthDate?.year ? String(p.birthDate.year) : ''); setPOccupation(p.occupation ?? ''); setPCharacteristics(p.characteristics ?? ''); }} style={{ padding: '6px 12px', borderRadius: 8, background: '#FFF3B0', color: '#5C3A21', border: '1px solid #D4A373', cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>Editar</button>
+                  <button type='button' onClick={() => delPerson(p.id)} style={{ padding: '6px 12px', borderRadius: 8, background: '#F4E1D2', color: '#8B4513', border: '1px solid #D4A373', cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>Eliminar</button>
+                  <button type='button' onClick={() => openQuickAdd(p.id, 'father')} style={{ padding: '6px 12px', borderRadius: 8, background: '#FFF3B0', color: '#5C3A21', border: '1px solid #D4A373', cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>+ Padre</button>
+                  <button type='button' onClick={() => openQuickAdd(p.id, 'mother')} style={{ padding: '6px 12px', borderRadius: 8, background: '#FFF3B0', color: '#5C3A21', border: '1px solid #D4A373', cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>+ Madre</button>
+                  <button type='button' onClick={() => openQuickAdd(p.id, 'spouse')} style={{ padding: '6px 12px', borderRadius: 8, background: '#FFF3B0', color: '#5C3A21', border: '1px solid #D4A373', cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>+ Pareja</button>
+                  <button type='button' onClick={() => openQuickAdd(p.id, 'child')} style={{ padding: '6px 12px', borderRadius: 8, background: '#FFF3B0', color: '#5C3A21', border: '1px solid #D4A373', cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>+ Hijo/a</button>
+                </div>
               </li>
             ))}
           </ul>
+            </>
+          )}
         </section>
       )}
 
@@ -416,29 +617,50 @@ export default function App() {
 
 {tab === 'tree' && (
         <section>
-          <h2>Arbol genealogico</h2>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-            <label>Centro:</label>
-            <select value={treeCenterId} onChange={(e) => setTreeCenterId(e.target.value)}>
-              <option value=''>(seleccionar)</option>
-              {persons.map((p) => <option key={p.id} value={p.id}>{[p.firstName, p.lastName].filter(Boolean).join(' ')}</option>)}
+          <h2>🌲 Tu Árbol Genealógico</h2>
+          <p style={{ fontSize: 13, color: '#8B4513', marginBottom: 12, fontStyle: 'italic', fontFamily: 'Georgia, serif' }}>Haz clic en cualquier persona para centrar el árbol en ella. Usa el botón ⋯ en cada tarjeta para agregar familiares, editar o eliminar.</p>
+          <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center', padding: 16, background: '#FFFDF5', borderRadius: 14, border: '2px solid #D4A373' }}>
+            <label style={{ fontWeight: 700, color: '#5C3A21', fontFamily: 'Georgia, serif', fontSize: 14 }}>Persona central:</label>
+            <select value={treeCenterId} onChange={(e) => setTreeCenterId(e.target.value)} style={{ padding: '8px 12px', borderRadius: 10, border: '1px solid #D4A373', background: 'white', fontSize: 14, fontFamily: 'Georgia, serif', minWidth: 180 }}>
+              <option value=''>(seleccionar persona)</option>
+              {personsT.map((p) => <option key={p.id} value={p.id}>{[p.firstName, p.lastName].filter(Boolean).join(' ')}</option>)}
             </select>
-            <label>Modo:</label>
-            <select value={treeMode} onChange={(e) => setTreeMode(e.target.value as any)}>
-              <option value='branch'>rama (ancestros + descendientes)</option>
-              <option value='ancestors'>ancestros</option>
-              <option value='descendants'>descendientes</option>
+            <label style={{ fontWeight: 700, color: '#5C3A21', fontFamily: 'Georgia, serif', fontSize: 14, marginLeft: 10 }}>Ver:</label>
+            <select value={treeMode} onChange={(e) => setTreeMode(e.target.value as any)} style={{ padding: '8px 12px', borderRadius: 10, border: '1px solid #D4A373', background: 'white', fontSize: 14, fontFamily: 'Georgia, serif' }}>
+              <option value='branch'>Árbol completo</option>
+              <option value='ancestors'>Solo antepasados</option>
+              <option value='descendants'>Solo descendientes</option>
             </select>
-            <label>Profundidad:</label>
-            <input type='number' min={1} max={10} value={treeDepth} onChange={(e) => setTreeDepth(Math.max(1, Math.min(10, Number(e.target.value) || 1)))} style={{ width: 60 }} />
           </div>
           <FamilyTree
-            persons={persons}
-            relationships={rels}
+            persons={personsT}
+            relationships={relsT}
             centerId={treeCenterId || null}
             depth={treeDepth}
             mode={treeMode}
+            photoUrls={personPhotoUrls}
             onSelectPerson={(id) => setTreeCenterId(id)}
+            onAddChild={(id) => openQuickAdd(id, 'child')}
+            onAddSpouse={(id) => openQuickAdd(id, 'spouse')}
+            onAddFather={(id) => openQuickAdd(id, 'father')}
+            onAddMother={(id) => openQuickAdd(id, 'mother')}
+            onEdit={(id) => {
+              const p = persons.find((x) => x.id === id);
+              if (!p) return;
+              setEditPerson(p.id);
+              setPName(p.firstName);
+              setPLast(p.lastName ?? '');
+              setPLife(p.lifeStatus);
+              setPBirthYear(p.birthDate?.year ? String(p.birthDate.year) : '');
+              setPOccupation(p.occupation ?? '');
+              setPCharacteristics(p.characteristics ?? '');
+              setTab('persons');
+              setMsg('Editando persona. Guarda los cambios abajo.');
+            }}
+            onDelete={async (id) => {
+              if (!window.confirm('¿Eliminar esta persona?')) return;
+              await delPerson(id);
+            }}
           />
         </section>
       )}
@@ -514,7 +736,52 @@ export default function App() {
       )}
 
 
-        {conflictOps && (
+        {wizardOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setWizardOpen(false)}>
+          <div style={{ background: 'white', padding: 24, borderRadius: 12, maxWidth: 420, width: '90%' }} onClick={(e) => e.stopPropagation()}>
+            <h3>Crear tu árbol</h3>
+            <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 12 }}>Responde estas dos preguntas y listo.</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <label>Nombre del árbol</label>
+              <input value={wizardTreeName} onChange={(e) => setWizardTreeName(e.target.value)} placeholder='Mi familia' />
+              <label>Tu nombre</label>
+              <input value={wizardMyName} onChange={(e) => setWizardMyName(e.target.value)} placeholder='Nombre' />
+              <label>Tu apellido (opcional)</label>
+              <input value={wizardLastName} onChange={(e) => setWizardLastName(e.target.value)} placeholder='Apellido' />
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'flex-end' }}>
+              <button type='button' onClick={() => setWizardOpen(false)}>Cancelar</button>
+              <button type='button' onClick={startMyTree}>Crear árbol</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {quickAdd && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={closeQuickAdd}>
+          <div style={{ background: 'white', padding: 24, borderRadius: 12, maxWidth: 420, width: '90%' }} onClick={(e) => e.stopPropagation()}>
+            <h3>{quickTitle(quickAdd.kind)}</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <label>Nombre</label>
+              <input value={quickName} onChange={(e) => setQuickName(e.target.value)} placeholder='Nombre' />
+              <label>Apellido (opcional)</label>
+              <input value={quickLast} onChange={(e) => setQuickLast(e.target.value)} placeholder='Apellido' />
+              <label>Estado</label>
+              <select value={quickLife} onChange={(e) => setQuickLife(e.target.value as 'alive' | 'deceased' | 'unknown')}>
+                <option value='alive'>vivo</option>
+                <option value='deceased'>fallecido</option>
+                <option value='unknown'>desconocido</option>
+              </select>
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'flex-end' }}>
+              <button type='button' onClick={closeQuickAdd}>Cancelar</button>
+              <button type='button' onClick={submitQuickAdd}>Guardar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {conflictOps && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setConflictOps(null)}>
           <div style={{ background: 'white', padding: 16, borderRadius: 8, maxWidth: 600, width: '90%' }} onClick={(e) => e.stopPropagation()}>
             <h3>Operaciones en conflicto</h3>
