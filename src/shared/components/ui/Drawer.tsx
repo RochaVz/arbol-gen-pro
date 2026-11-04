@@ -1,0 +1,64 @@
+import React from "react";
+import { Button } from './Button';
+import type { HTMLAttributes } from 'react';
+
+/**
+ * Drawer — Panel lateral que se desliza (mobile-first, ideal para móviles y tablets).
+ * Se abre desde la derecha o izquierda, superficie papel.
+ */
+export interface DrawerProps extends HTMLAttributes<HTMLDivElement> {
+  isOpen: boolean;
+  onClose: () => void;
+  position?: 'left' | 'right';
+  title?: string;
+  closeLabel?: string;
+}
+
+export const Drawer = React.forwardRef<HTMLDivElement, DrawerProps>(
+  ({ isOpen, onClose, position = 'right', title, closeLabel = 'Cerrar', className = '', children, ...props }, ref) => {
+    if (!isOpen) return null;
+
+    return (
+      <>
+        {/* Backdrop */}
+        <div
+          className="fixed inset-0 z-[900] bg-ink/40 backdrop-blur-sm"
+          onClick={onClickOutside}
+        />
+
+        {/* Panel */}
+        <div
+          ref={ref}
+          className={`
+            fixed inset-0 z-[1000] bg-surface border-l border-border shadow-xl
+            ${position === 'right' ? 'right-0' : 'left-0'}
+            w-full sm:w-[420px] h-full flex flex-col
+            transform transition-transform duration-300 ease-in-out
+            ${position === 'right' ? 'translate-x-full' : '-translate-x-full'}
+            data-[state=open]:translate-x-0
+            ${className}
+          `.trim()}
+          {...props}
+        >
+          <div className="flex items-center justify-between p-4 sm:p-6 border-b border-border bg-surface-elevated">
+            {title && (
+              <h3 className="text-lg font-semibold text-ink font-serif-titles">
+                {title}
+              </h3>
+            )}
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={onClose}>
+              ✕
+            </Button>
+          </div>
+          <div className="p-4 sm:p-6 overflow-y-auto flex-1">{children}</div>
+        </div>
+      </>
+    );
+
+    function onClickOutside(e: MouseEvent) {
+      if ((e.target as HTMLElement).className.includes('z-\[900\]')) onClose();
+    }
+  },
+);
+
+Drawer.displayName = 'Drawer';

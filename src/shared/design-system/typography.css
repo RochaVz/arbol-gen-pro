@@ -1,0 +1,151 @@
+/* ==========================================================================
+   ARBOL-GEN-PRO — Tipografía
+   Títulos: Playfair Display (elegante, legado)
+   Contenido: Lora (legible, libro)
+   UI: Inter (interfaces, botones, formularios)
+   ========================================================================== */
+
+/* Importar fuentes desde Google Fonts (con fallback a sistema) */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
+
+html {
+  /* Base: 16px en desktop, 15px en móvil pequeño para mejor legibilidad */
+  font-size: 16px;
+}
+
+@media (max-width: 640px) {
+  html {
+    font-size: 15px;
+  }
+}
+
+body {
+  font-family: var(--font-sans-ui);
+  font-size: var(--text-base);
+  line-height: var(--line-height-normal);
+  color: var(--color-ink);
+  background-color: var(--color-paper);
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* ── Títulos (Playfair Display) ── */
+h1, h2, h3, h4, h5, h6,
+.title, .heading {
+  font-family: var(--font-serif-titles);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  color: var(--color-ink);
+  margin-top: 0;
+}
+
+h1, .h1 {
+  font-size: var(--text-3xl);
+  font-weight: var(--font-weight-bold);
+  margin-bottom: var(--space-5);
+  letter-spacing: -0.01em;
+}
+
+h2, .h2 {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-weight-semibold);
+  margin-bottom: var(--space-4);
+  letter-spacing: -0.01em;
+}
+
+h3, .h3 {
+  font-size: var(--text-xl);
+  font-weight: var(--font-weight-semibold);
+  margin-bottom: var(--space-3);
+}
+
+h4, .h4 {
+  font-size: var(--text-lg);
+  font-weight: var(--font-weight-medium);
+  margin-bottom: var(--space-3);
+}
+
+/* ── Contenido / cuerpo (Lora) ── */
+p, .lead, .body {
+  font-family: var(--font-serif-content);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-relaxed);
+  color: var(--color-ink);
+  margin-bottom: var(--space-4);
+}
+
+p:last-child, .body:last-child {
+  margin-bottom: 0;
+}
+
+.lead {
+  font-size: var(--text-lg);
+  line-height: var(--line-height-loose);
+  font-style: italic;
+  color: var(--color-wood);
+}
+
+/* ── UI / Interfaces (Inter) ── */
+.button, .label, .caption, .meta, .tag, .badge,
+button, input, select, textarea {
+  font-family: var(--font-sans-ui);
+}
+
+/* ── Metadatos pequeños ── */
+.meta, .caption, .text-small {
+  font-family: var(--font-sans-ui);
+  font-size: var(--text-sm);
+  line-height: var(--line-height-normal);
+  color: var(--color-wood);
+  letter-spacing: 0.01em;
+}
+
+/* ── Etiquetas y badges ── */
+.badge, .tag {
+  font-family: var(--font-sans-ui);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* ── Enlaces ── */
+a {
+  color: var(--color-accent);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+a:hover {
+  color: var(--color-wood);
+  text-decoration: underline;
+}
+
+a:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* ── Listas ── */
+ul, ol {
+  font-family: var(--font-serif-content);
+  line-height: var(--line-height-relaxed);
+  color: var(--color-ink);
+  margin-bottom: var(--space-4);
+  padding-left: var(--space-5);
+}
+
+li {
+  margin-bottom: var(--space-2);
+}
+
+/* ── HR suave ── */
+hr {
+  border: none;
+  border-top: 1px solid var(--color-border);
+  margin: var(--space-8) 0;
+}

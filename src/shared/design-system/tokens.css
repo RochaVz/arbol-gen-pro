@@ -1,0 +1,125 @@
+
+/* ==========================================================================
+   ARBOL-GEN-PRO — Design System Tokens
+   Estética: 40% Álbum Familiar Antiguo + 30% Biblioteca Histórica +
+             30% Diseño Moderno Minimalista — VERSION VIVIDA
+   ========================================================================== */
+
+/* ── Paleta de colores vibrantes y alto contraste (Light) ── */
+:root {
+  --color-ivory: #FFF9E8;          /* marfil muy claro - secundarios (light) - suave */
+  --color-tangerine: #FF6B35;      /* naranja intenso - acentos principales, CTA */
+  --color-tangerine-hover: #FF5722;/* naranja oscuro - hover state */
+  --color-cerulean: #0891B2;       /* azul intenso - acentos secundarios, highlights */
+  --color-cerulean-hover: #0E7490; /* azul hover */
+  --color-charcoal: #2D3748;       /* carbón oscuro - textos primarios (light) - máximo contraste */
+  --color-charcoal-light: #4A5568; /* gris carbón - textos secundarios */
+  
+  --color-surface: #FFFFFF;        /* superficie principal - tarjetas, modales (light) */
+  --color-surface-elevated: #F8FAFC; /* superficie elevada - modales flotantes */
+  
+  --color-border: #CBD5E0;         /* borde suave - separaciones */
+  --color-border-strong: #A0AEC0;  /* borde fuerte */
+  
+  /* Estados de vida - colores vibrantes */
+  --color-life-alive: #EF4444;     /* rojo intenso - persona viva */
+  --color-life-deceased: #6B7280;  /* gris - fallecido (✝) */
+  --color-life-unknown: #6B7280;   /* gris - estado desconocido */
+  
+  /* Sincronización - colores nítidos */
+  --color-sync-synced: #10B981;    /* verde intenso - sincronizado */
+  --color-sync-pending: #F59E0B;   /* ámbar intenso - pendiente */
+  --color-sync-error: #EF4444;     /* rojo intenso - error */
+  --color-sync-offline: #64748B;   /* gris cielo - offline */
+}
+/* ── Dark mode - vibrante y moderno ── */
+.dark {
+  --color-paper: #1E293B;          /* azul oscuro casi negro - fondos principales (dark) */
+  --color-ivory: #334155;          /* gris oscuro - secundarios oscuro */
+  --color-tangerine: #FF6B35;      /* naranja intenso - acentos principales, resalta */
+  --color-tangerine-hover: #FF5722;/* naranja oscuro - hover state */
+  --color-cerulean: #38BDC8;       /* azul cielo vibrante - acentos secundarios */
+  --color-cerulean-hover: #0F8A9F; /* azul hover */
+  --color-charcoal: #F8F9FA;       /* casi blanco - textos primarios (dark) - máximo contraste */
+  --color-charcoal-light: #CBD5E0; /* gris - textos secundarios */
+  
+  --color-surface: #1E293B;        /* superficie principal - tarjetas, modales (dark) */
+  --color-surface-elevated: #334155; /* superficie elevada - modales flotantes */
+  
+  --color-border: #475569;         /* border oscuro más suave */
+  --color-border-strong: #64748B;  /* border fuerte */
+  
+  /* Estados de vida - vibrantes en modo oscuro */
+  --color-life-alive: #F87171;     /* rojo vibrante - persona viva */
+  --color-life-deceased: #9CA3AF;  /* gris suave - fallecido (✝) */
+  --color-life-unknown: #9CA3AF;   /* gris suave - estado desconocido */
+  
+  /* Sincronización - vibrantes en modo oscuro */
+  --color-sync-synced: #34D399;    /* verde menta vibrante - sincronizado */
+  --color-sync-pending: #FBBF24;   /* amarillo vibrante - pendiente */
+  --color-sync-error: #F87171;     /* rojo vibrante - error */
+  --color-sync-offline: #94A3B8;   /* gris suave - offline */
+}
+/* ── Accentos de interacción ── */
+.has-accent { color: var(--color-tangerine); }
+.hover-accent:hover { color: var(--color-tangerine-hover); }
+/* ── Botones vibrantes - modo claro ── */
+@media (prefers-color-scheme: light) {
+  .btn-vibrant {
+    background: linear-gradient(135deg, var(--color-tangerine), var(--color-cerulean));
+    color: white;
+    box-shadow: 0 4px 14px rgba(255, 107, 53, 0.4);
+  }
+  .btn-vibrant:hover {
+    background: linear-gradient(135deg, var(--color-tangerine-hover), var(--color-cerulean-hover));
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 107, 53, 0.5);
+  }
+  .btn-vibrant:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 6px rgba(255, 107, 53, 0.3);
+  }
+}
+/* ── Botones vibrantes - modo oscuro ── */
+@media (prefers-color-scheme: dark) {
+  .btn-vibrant {
+    background: linear-gradient(135deg, var(--color-tangerine), var(--color-cerulean));
+    color: var(--color-paper);
+    box-shadow: 0 4px 14px rgba(255, 107, 53, 0.4);
+  }
+  .btn-vibrant:hover {
+    background: linear-gradient(135deg, var(--color-tangerine-hover), var(--color-cerulean-hover));
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 107, 53, 0.5);
+  }
+  .btn-vibrant:active {
+    transform: translateY(1px);
+    box-shadow: 0 2px 6px rgba(255, 107, 53, 0.3);
+  }
+}
+/* ── Utilidades de acceso rápido ── */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.sr-only:not(:focus):not(:active) {
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  width: 1px;
+  white-space: nowrap;
+}
+/* ── Select de texto ── */
+::selection {
+  background: var(--color-tangerine);
+  color: var(--color-paper);
+}
