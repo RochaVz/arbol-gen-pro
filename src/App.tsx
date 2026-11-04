@@ -23,6 +23,8 @@ import { PersonProfilePage } from './features/person/PersonProfilePage';
 
 type View = 'home' | 'tree' | 'person';
 
+type ColorMode = 'light' | 'dark';
+
 export default function App() {
   const sync = useSyncStatus();
   const [view, setView] = useState<View>('home');

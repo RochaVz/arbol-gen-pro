@@ -8,7 +8,6 @@ export interface TreeNodeProps {
   isCenter?: boolean;
   onSelect: (id: string) => void;
   size?: 'sm' | 'md' | 'lg';
-  style?: React.CSSProperties;
   className?: string;
 }
 
@@ -19,7 +18,7 @@ const SIZE_MAP: Record<string, { w: string; h: string; avatar: 'sm' | 'md' | 'lg
 };
 
 export const TreeNode = React.forwardRef<HTMLDivElement, TreeNodeProps>(
-  ({ person, photoUrl, isCenter = false, onSelect, size = 'md', style, className = '' }, ref) => {
+  ({ person, photoUrl, isCenter = false, onSelect, size = 'md', className = '' }, ref) => {
     const cfg = SIZE_MAP[size];
     const deceased = person.lifeStatus === 'deceased';
     const name = `${person.firstName} ${person.lastName ?? ''}`;
@@ -36,7 +35,7 @@ export const TreeNode = React.forwardRef<HTMLDivElement, TreeNodeProps>(
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
     const dragRef = useRef<HTMLDivElement>(null);
 
-    const onMouseDown = useCallback((e: React.MouseEvent) => {
+    const onMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
       if (e.target.tagName === 'BUTTON') return;
       setIsDragging(true);
       setDragOffset({
@@ -72,7 +71,7 @@ export const TreeNode = React.forwardRef<HTMLDivElement, TreeNodeProps>(
           ${isCenter ? 'border-2 border-accent shadow-lg scale-105' : 'border border-border'}
           ${deceased ? 'border-border/50' : ''}
           ${className}
-          style={style}
+          
           `
         }
         onMouseDown={onMouseDown}
