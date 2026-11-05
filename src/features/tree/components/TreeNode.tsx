@@ -99,11 +99,12 @@ export const TreeNode = React.forwardRef<HTMLDivElement, TreeNodeProps>(
         </div>
 
         {/* Nombre */}
-        <h4
-          className={`text-sm sm:text-base font-semibold text-ink font-serif-titles leading-tight text-center ${isCenter ? 'text-ink' : 'text-wood'}`}
+        <h3
+          className="text-sm sm:text-base font-semibold text-text font-sans leading-tight text-center truncate"
+          title={name}
         >
           {name}
-        </h4>
+        </h3>
 
         {/* Años de vida */}
         <p className="text-xs text-xs sm:text-sm text-forest text-center leading-tight">
