@@ -1,6 +1,7 @@
 import React from "react";
 import type { Person } from '../../../core/db/schema';
 import type { Relationship } from '../../../core/db/schema';
+import type { Pt } from '../utils/treeLayout';
 import { TreeNode } from './TreeNode';
 import { ConnectionLine } from './ConnectionLine';
 import { computeLayout, NODE_W, NODE_H, spousesOf, parentsOf } from '../utils/treeLayout';
@@ -40,10 +41,9 @@ export const EmotionalTree = React.forwardRef<
 
     if (!centerId) {
       return (
-        <Card radius="lg" className={`
-          bg-surface border border-border shadow-sm text-center py-12
-          ${className}
-        `.trim()}>
+        <Card radius="lg" className={
+          "bg-surface border border-border shadow-sm text-center py-12 " + className
+        }>
           <div className="text-4xl mb-3">🌳</div>
           <h3 className="text-lg font-semibold text-ink font-serif-titles mb-2">
             Selecciona una persona para ver su árbol
@@ -56,25 +56,27 @@ export const EmotionalTree = React.forwardRef<
     }
 
     const layout = computeLayout(centerId, depth, 'branch', relationships);
-    const { pos, width, height } = layout;
+    const { pos, width, height, minX, minY } = layout;
+
+    // Shift positions so minX/minY are 0, keeping nodes within container
+    const shiftedPos = new Map<string, Pt>();
+    for (const [id, pt] of pos.entries()) {
+      shiftedPos.set(id, { x: pt.x - minX, y: pt.y - minY });
+    }
 
     return (
       <div
         ref={ref}
-        className={`
-          w-full h-full relative bg-surface/30 rounded-xl border border-border/50
-          overflow-auto touch-none
-          ${className}
-        `.trim()}
-        style={{ minHeight: '600px' }}
+        className="w-full h-full relative bg-surface/30 rounded-xl border border-border/50 overflow-auto touch-none"
+        style={{ minHeight: '600px', width: width + 80 }}
       >
         {/* Capa de conexiones (SVG detrás de los nodos) */}
         <svg
           className="absolute inset-0 w-full h-full pointer-events-none"
           style={{ width: '100%', height: '100%' }}
         >
-          {renderSpouseLines()}
-          {renderFamilyLines()}
+          {renderSpouseLines(shiftedPos)}
+          {renderFamilyLines(shiftedPos)}
         </svg>
 
         {/* Nodos (personas) */}
@@ -86,7 +88,7 @@ export const EmotionalTree = React.forwardRef<
             transformOrigin: 'top left',
           }}
         >
-          {Array.from(pos.entries()).map(([id, pt]) => {
+          {Array.from(shiftedPos.entries()).map(([id, pt]) => {
             const person = byId.get(id);
             if (!person) return null;
             const isCenter = id === centerId;
@@ -128,7 +130,7 @@ export const EmotionalTree = React.forwardRef<
       </div>
     );
 
-    function renderSpouseLines() {
+    function renderSpouseLines(pos: Map<string, Pt>) {
       const edges: Array<{ x1: number; y1: number; x2: number; y2: number }> = [];
       const seen = new Set<string>();
       for (const id of pos.keys()) {
@@ -159,7 +161,7 @@ export const EmotionalTree = React.forwardRef<
       ));
     }
 
-    function renderFamilyLines() {
+    function renderFamilyLines(pos: Map<string, Pt>) {
       const edges: Array<{ x1: number; y1: number; x2: number; y2: number }> = [];
       for (const id of pos.keys()) {
         const parentIds = parentsOf(id, relationships);
@@ -186,7 +188,7 @@ export const EmotionalTree = React.forwardRef<
         />
       ));
     }
-  },
+  }
 );
 
 EmotionalTree.displayName = 'EmotionalTree';
