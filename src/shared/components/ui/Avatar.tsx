@@ -34,7 +34,6 @@ export const Avatar = React.forwardRef<HTMLDivElement, AvatarProps>(
           .toUpperCase()
       : '?';
 
-    const border = borderColor || (deceased ? 'border-life-deceased' : 'border-sepia');
 
     return (
       <div

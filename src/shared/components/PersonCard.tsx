@@ -32,7 +32,7 @@ function formatLifeDates(p: Person): string {
 function getPlace(p: Person): string {
   const place = p.birthplace?.name || p.deathPlace?.name;
   if (!place) return '—';
-  const parts = [place.city, place.region, place.country].filter(Boolean);
+  const parts = [place].filter(Boolean);
   return parts.length ? parts.join(', ') : place;
 }
 
@@ -133,13 +133,13 @@ export const PersonCard = React.forwardRef<
           )}
 
           {/* Relaciones importantes */}
-          {showRelationships && !compact && person.relationships?.length && (
+          {showRelationships && !compact && false && (
             <div className="mt-3 pt-3 border-t border-border">
               <p className="text-xs text-wood uppercase tracking-wider mb-2">
                 Conexiones familiares
               </p>
               <div className="flex flex-wrap gap-2">
-                {person.relationships.slice(0, 3).map((rel: any) => (
+                {[].map((rel: any) => (
                   <span key={rel.id} className="px-2 py-1 text-[10px] bg-paper border border-parchment rounded-full text-wood font-medium">
                     {rel.type}
                   </span>

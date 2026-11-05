@@ -2,6 +2,22 @@ import React from 'react';
 
 export interface PersonProfilePageProps {
   personId?: string;
+  photoUrl?: string;
+  parents?: any[];
+  children?: any[];
+  partners?: any[];
+  events?: any[];
+  gallery?: any[];
+  documents?: any[];
+  onSelectPerson?: (id: string) => void;
+  onBack?: () => void;
+  onEdit?: () => void;
+  onAddPhoto?: () => void;
+  onAddParent?: () => void;
+  onAddChild?: () => void;
+  onAddPartner?: () => void;
+  onAddEvent?: () => void;
+  onAddDocument?: () => void;
 }
 
 export const PersonProfilePage: React.FC<PersonProfilePageProps> = ({

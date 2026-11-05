@@ -342,7 +342,7 @@ export default function App() {
         )}
         {view === 'person' && selectedPerson && (
           <PersonProfilePage
-            person={selectedPerson}
+            personId={selectedPerson?.id}
             photoUrl={personPhotoUrls[selectedPerson.id]}
             parents={personParents}
             children={personChildren}

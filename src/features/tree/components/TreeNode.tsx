@@ -9,6 +9,7 @@ export interface TreeNodeProps {
   onSelect: (id: string) => void;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
+  style?: React.CSSProperties;
 }
 
 const SIZE_MAP: Record<string, { w: string; h: string; avatar: 'sm' | 'md' | 'lg'; padding: string }> = {
@@ -18,7 +19,7 @@ const SIZE_MAP: Record<string, { w: string; h: string; avatar: 'sm' | 'md' | 'lg
 };
 
 export const TreeNode = React.forwardRef<HTMLDivElement, TreeNodeProps>(
-  ({ person, photoUrl, isCenter = false, onSelect, size = 'md', className = '' }, ref) => {
+  ({ person, photoUrl, isCenter = false, onSelect, size = 'md', className = '', style }, ref) => {
     const cfg = SIZE_MAP[size];
     const deceased = person.lifeStatus === 'deceased';
     const name = `${person.firstName} ${person.lastName ?? ''}`;
@@ -36,7 +37,7 @@ export const TreeNode = React.forwardRef<HTMLDivElement, TreeNodeProps>(
     const dragRef = useRef<HTMLDivElement>(null);
 
     const onMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-      if (e.target.tagName === 'BUTTON') return;
+      if ((e.target as HTMLButtonElement).tagName === 'BUTTON') return;
       setIsDragging(true);
       setDragOffset({
         x: e.clientX - (dragRef.current?.getBoundingClientRect().left || 0),
@@ -60,7 +61,7 @@ export const TreeNode = React.forwardRef<HTMLDivElement, TreeNodeProps>(
     return (
       <div
         ref={ref}
-        ref={dragRef}
+        style={style}
         className={
           `
           relative flex flex-col items-center

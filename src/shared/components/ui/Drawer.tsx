@@ -55,7 +55,7 @@ export const Drawer = React.forwardRef<HTMLDivElement, DrawerProps>(
       </>
     );
 
-    function onClickOutside(e: MouseEvent) {
+    function onClickOutside(e: React.MouseEvent<HTMLDivElement>) {
       if ((e.target as HTMLElement).className.includes('z-\[900\]')) onClose();
     }
   },
