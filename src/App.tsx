@@ -366,6 +366,8 @@ export default function App() {
             onAddMember={() => trees.length === 0 ? setWizardOpen(true) : (treeCenterId ? openQuickAdd(treeCenterId, 'child') : setWizardOpen(true))}
             onViewMemory={() => {}}
           />
+</div>
+
         )}
         {view === 'tree' && (
           <TreeWorkspace>
@@ -379,7 +381,9 @@ export default function App() {
             onAddParent={(id) => openQuickAdd(id, 'father')}
             onAddChild={(id) => openQuickAdd(id, 'child')}
             onAddPartner={(id) => openQuickAdd(id, 'spouse')}
+)
 
+)
 </TreeWorkspace>
 
           />
