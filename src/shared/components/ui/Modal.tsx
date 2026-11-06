@@ -21,7 +21,7 @@ export const Modal = React.forwardRef<HTMLDivElement, ModalProps>(
       <>
         {/* Backdrop */}
         <div
-          className="fixed inset-0 z-[1000] bg-ink/60 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6"
+          className="fixed inset-0 z-[1000] bg-black/40 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200"
           onClick={onClickOutside}
         >
           <span className="sr-only">{closeLabel}</span>
@@ -30,26 +30,26 @@ export const Modal = React.forwardRef<HTMLDivElement, ModalProps>(
           <div
             ref={ref}
             className={`
-              bg-surface-elevated border border-border rounded-xl shadow-xl
+              bg-white border border-neutral-200 rounded-2xl shadow-2xl
               max-w-lg w-full max-h-[90vh] flex flex-col
-              animate-in fade-in zoom-in duration-200
+              animate-in fade-in zoom-in-95 duration-300 transform
               ${className}
             `.trim()}
             style={{ overflow: 'auto', overscrollBehavior: 'contain' }}
             {...props}
           >
             {title && (
-              <div className="p-6 sm:p-8 border-b border-border">
-                <h3 className="text-xl font-semibold text-ink font-serif-titles">
+              <div className="p-6 sm:p-8 border-b border-neutral-200 bg-gradient-to-r from-primary-50 to-transparent">
+                <h3 className="text-2xl font-bold text-neutral-900 font-serif-titles">
                   {title}
                 </h3>
               </div>
             )}
-            <div className="p-6 sm:p-8 overflow-y-auto max-h-[60vh]">
+            <div className="p-6 sm:p-8 overflow-y-auto max-h-[60vh] flex-1">
               {children}
             </div>
-            <div className="p-4 sm:p-6 border-t border-border bg-surface/50">
-              <Button variant="ghost" onClick={onClose} className="w-full sm:w-auto">
+            <div className="p-4 sm:p-6 border-t border-neutral-200 bg-neutral-50 flex justify-end gap-3">
+              <Button variant="ghost" onClick={onClose} size="md">
                 {closeLabel}
               </Button>
             </div>

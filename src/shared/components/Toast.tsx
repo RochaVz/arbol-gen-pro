@@ -11,10 +11,10 @@ export interface ToastProps {
 }
 
 const typeStyles: Record<ToastType, string> = {
-  success: 'bg-green-50 text-green-900 border-green-200',
-  error: 'bg-red-50 text-red-900 border-red-200',
-  warning: 'bg-yellow-50 text-yellow-900 border-yellow-200',
-  info: 'bg-blue-50 text-blue-900 border-blue-200',
+  success: 'bg-gradient-to-r from-green-50 to-emerald-50 text-green-900 border-l-4 border-green-500 shadow-lg',
+  error: 'bg-gradient-to-r from-red-50 to-rose-50 text-red-900 border-l-4 border-red-500 shadow-lg',
+  warning: 'bg-gradient-to-r from-amber-50 to-orange-50 text-amber-900 border-l-4 border-amber-500 shadow-lg',
+  info: 'bg-gradient-to-r from-blue-50 to-cyan-50 text-blue-900 border-l-4 border-blue-500 shadow-lg',
 };
 
 const typeIcons: Record<ToastType, string> = {
@@ -49,20 +49,20 @@ export const Toast: React.FC<ToastProps> = ({
     <div
       role="alert"
       className={`
-        px-4 py-3 rounded-lg border shadow-md
-        animate-fade-in
+        px-5 py-4 rounded-xl border
+        animate-fade-in transform transition-all duration-300
         ${typeStyles[type]}
       `}
     >
-      <div className="flex items-center gap-3">
-        <span className="text-lg font-bold">{typeIcons[type]}</span>
-        <p className="text-sm font-medium">{message}</p>
+      <div className="flex items-center gap-4">
+        <span className="text-xl font-bold flex-shrink-0">{typeIcons[type]}</span>
+        <p className="text-sm font-semibold flex-1">{message}</p>
         <button
           onClick={() => {
             setIsVisible(false);
             onDismiss(id);
           }}
-          className="ml-auto text-lg leading-none opacity-70 hover:opacity-100"
+          className="ml-2 text-lg leading-none opacity-60 hover:opacity-100 transition-opacity flex-shrink-0"
           aria-label="Dismiss notification"
         >
           ✕
