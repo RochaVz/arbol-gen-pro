@@ -17,6 +17,7 @@ import { startRealtimeSync, stopRealtimeSync } from './core/sync/realtime';
 // exportToJson, exportToGedcom, downloadText removed (unused in this UI pass)
 import { Button } from './shared/components/ui/Button';
 import { Modal } from './shared/components/ui/Modal';
+import { TreeWorkspace } from './features/tree/TreeWorkspace';
 import { Home } from './features/home/Home';
 import { EmotionalTree } from './features/tree/components/EmotionalTree';
 import { PersonProfilePage } from './features/person/PersonProfilePage';
@@ -313,8 +314,47 @@ export default function App() {
           </div>
         </div>
       )}
-      <main className="max-w-4xl mx-auto px-4 pb-8">
-        {view === 'home' && (
+      <main className="flex min-h-[calc(100vh-60px)]">
+        {/* Navigation lateral - visible en desktop */}
+          <nav className="w-16 sm:w-20 bg-surface/50 border-r border-border/20 flex flex-col items-center py-4 sm:py-6">
+            <div className="flex-1 text-center">
+              <h2 className="text-sm font-medium text-ink mb-4 font-serif-titles">
+                Menú
+              </h2>
+            </div>
+            <div className="space-y-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setView('home')}
+                className="flex items-center justify-center gap-2 rounded-lg hover:bg-surface/30 transition-colors"
+                aria-label="Inicio"
+              >
+                🏠
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setView('tree')}
+                className="flex items-center justify-center gap-2 rounded-lg hover:bg-surface/30 transition-colors"
+                aria-label="Árbol"
+              >
+                🌳
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setView('person')}
+                className="flex items-center justify-center gap-2 rounded-lg hover:bg-surface/30 transition-colors"
+                aria-label="Perfil"
+              >
+                👤
+              </Button>
+            </div>
+          </nav>
+
+          {/* Contenido principal - vistas diferenciadas */}
+          <div className="flex-1 flex flex-col">
           <Home
             treeName={trees.find((t) => t.id === treeId)?.name ?? 'Mi familia'}
             treeSubtitle="Tu historia familiar en un solo lugar"
@@ -328,6 +368,7 @@ export default function App() {
           />
         )}
         {view === 'tree' && (
+          <TreeWorkspace>
           <EmotionalTree
             persons={personsT}
             relationships={relsT}
@@ -338,11 +379,14 @@ export default function App() {
             onAddParent={(id) => openQuickAdd(id, 'father')}
             onAddChild={(id) => openQuickAdd(id, 'child')}
             onAddPartner={(id) => openQuickAdd(id, 'spouse')}
+
+</TreeWorkspace>
+
           />
         )}
         {view === 'person' && selectedPerson && (
           <PersonProfilePage
-            personId={selectedPerson?.id}
+            person={selectedPerson}
             photoUrl={personPhotoUrls[selectedPerson.id]}
             parents={personParents}
             children={personChildren}
