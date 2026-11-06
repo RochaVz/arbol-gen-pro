@@ -7,7 +7,7 @@ import React from 'react';
  * - width: 100% (nunca limitado por max-width)
  * - min-height: calc(100vh - header) 
  * - overflow: auto (scroll independiente)
- * - background independiente (gris superficie/ink)
+ * - background gradiente profesional
  * - separación visual del resto de la app mediante padding y sombra
  * - z-index controlado para evitar superposiciones
  */
@@ -22,16 +22,17 @@ export const TreeWorkspace = React.forwardRef<HTMLDivElement, {
       className={`
         w-full
         min-h-screen
-        overflow-x-hidden
+        overflow-x-auto
         overflow-y-auto
-        bg-surface/50
-        border-t border-border/20
-        backdrop-blur-sm
+        bg-gradient-to-br from-neutral-50 via-white to-neutral-100
+        border-t-2 border-neutral-200
         ${className}
       `.trim()}
       style={style}
     >
-      {children}
+      <div className="p-8">
+        {children}
+      </div>
     </div>
   );
 });

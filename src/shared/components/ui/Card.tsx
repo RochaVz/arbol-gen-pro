@@ -14,10 +14,10 @@ export interface CardProps extends HTMLAttributes<HTMLDivElement> {
 export const Card = React.forwardRef<HTMLDivElement, CardProps>(
   ({ padded = true, elevated = false, radius = 'md', className = '', children, ...props }, ref) => {
     const radii: Record<string, string> = {
-      sm: 'rounded-sm',
-      md: 'rounded-md',
-      lg: 'rounded-lg',
-      xl: 'rounded-xl',
+      sm: 'rounded-lg',
+      md: 'rounded-xl',
+      lg: 'rounded-2xl',
+      xl: 'rounded-3xl',
       full: 'rounded-full',
     };
 
@@ -25,10 +25,11 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
       <div
         ref={ref}
         className={`
-          bg-surface border border-border ${radii[radius]}
-          ${elevated ? 'shadow-lg' : 'shadow-md'}
-          transition-shadow duration-300
-          ${padded ? 'p-4 sm:p-6' : ''}
+          bg-white border border-neutral-200
+          ${radii[radius]}
+          ${elevated ? 'shadow-xl' : 'shadow-lg'}
+          hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1
+          ${padded ? 'p-6 sm:p-8' : ''}
           ${className}
         `.trim()}
         {...props}

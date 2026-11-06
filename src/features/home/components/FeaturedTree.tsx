@@ -1,8 +1,6 @@
 import React from "react";
 import type { Person } from '../../../core/db/schema';
-import { Card } from '../../../shared/components/ui/Card';
 import { Button } from '../../../shared/components/ui/Button';
-import { Avatar } from '../../../shared/components/ui/Avatar';
 
 export interface FeaturedTreeProps {
   title: string;
@@ -20,17 +18,15 @@ export const FeaturedTree = React.forwardRef<
 >(
   ({ title, subtitle, members, photoUrl, onViewTree, onAddMember, className = '' }, ref) => {
     return (
-      <Card
+      <div
         ref={ref}
-        elevated
-        radius="lg"
         className={`
-          bg-surface-elevated border border-parchment shadow-lg
-          overflow-hidden ${className}
+          bg-white rounded-2xl border border-neutral-200 shadow-xl overflow-hidden
+          hover:shadow-2xl transition-all duration-300 ${className}
         `.trim()}
       >
         {/* Foto destacada del árbol / familia */}
-        <div className="relative h-48 sm:h-64 overflow-hidden bg-parchment">
+        <div className="relative h-64 sm:h-80 overflow-hidden bg-gradient-to-br from-primary-100 to-primary-50">
           {photoUrl ? (
             <img
               src={photoUrl}
@@ -39,62 +35,58 @@ export const FeaturedTree = React.forwardRef<
               loading="lazy"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-6xl text-sepia/40">
+            <div className="w-full h-full flex items-center justify-center text-8xl text-primary-300">
               🌳
             </div>
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-surface/90 to-transparent p-6 sm:p-8">
-            <div className="flex items-end justify-between w-full">
-              <div>
-                <h2 className="text-xl sm:text-2xl font-semibold text-ink font-serif-titles mb-1">
-                  {title}
-                </h2>
-                <p className="text-sm sm:text-base text-wood font-serif-content">
-                  {subtitle}
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="ghost" size="sm" onClick={onViewTree}>
-                  Ver árbol
-                </Button>
-                <Button size="sm" onClick={onAddMember}>
-                  Agregar
-                </Button>
-              </div>
+          <div className="absolute inset-0 bg-gradient-to-t from-neutral-900/80 via-neutral-900/40 to-transparent"></div>
+          <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8 text-white">
+            <h2 className="text-3xl sm:text-4xl font-bold font-serif-titles mb-2">
+              {title}
+            </h2>
+            <p className="text-base sm:text-lg text-neutral-100 font-serif-content mb-6">
+              {subtitle}
+            </p>
+            <div className="flex gap-3 flex-wrap">
+              <Button variant="primary" size="md" onClick={onViewTree}>
+                🌳 Explorar árbol
+              </Button>
+              <Button variant="secondary" size="md" onClick={onAddMember}>
+                ➕ Agregar miembro
+              </Button>
             </div>
           </div>
         </div>
 
         {/* Miembros destacados (avatares) */}
-        <div className="p-6 sm:p-8">
-          <p className="text-xs text-wood uppercase tracking-wider font-medium mb-4">
-            Miembros de esta familia
+        <div className="p-8 border-t-2 border-neutral-200 bg-neutral-50">
+          <p className="text-xs text-neutral-600 uppercase tracking-wider font-bold mb-6">
+            👥 {members.length} Miembros de esta familia
           </p>
-          <div className="flex flex-wrap gap-3 -mt-2">
-            {members.slice(0, 6).map((member) => (
+          <div className="flex flex-wrap gap-4">
+            {members.slice(0, 8).map((member) => (
               <div key={member.id} className="relative group">
-                <Avatar
-                  src={undefined}
-                  name={`${member.firstName} ${member.lastName ?? ''}`}
-                  size="md"
-                  deceased={member.lifeStatus === 'deceased'}
-                  className="ring-2 ring-surface ring-offset-2 ring-offset-parchment shadow-md"
-                />
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary-200 to-primary-100 border-3 border-white shadow-md hover:shadow-lg transition-all group-hover:scale-110 flex items-center justify-center font-bold text-2xl">
+                  {member.firstName.charAt(0)}
+                </div>
                 {member.lifeStatus === 'deceased' && (
-                  <span className="absolute -right-1 -bottom-1 bg-wood text-surface text-[10px] font-bold rounded-full px-1">
+                  <span className="absolute -right-2 -bottom-2 bg-neutral-800 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center border-2 border-white">
                     ✝
                   </span>
                 )}
+                <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-neutral-900 text-white text-xs px-3 py-1 rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                  {member.firstName} {member.lastName}
+                </div>
               </div>
             ))}
-            {members.length > 6 && (
-              <div className="w-12 h-12 bg-parchment border border-border rounded-full flex items-center justify-center text-wood font-semibold text-sm">
-                +{members.length - 6}
+            {members.length > 8 && (
+              <div className="w-16 h-16 bg-white border-3 border-neutral-300 rounded-full flex items-center justify-center font-bold text-primary-600 text-lg shadow-md">
+                +{members.length - 8}
               </div>
             )}
           </div>
         </div>
-      </Card>
+      </div>
     );
   },
 );
