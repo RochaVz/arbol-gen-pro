@@ -11,10 +11,7 @@ import type { Person, Relationship, Event, Tree, SyncOperation, Photo } from './
 import { useSyncStatus } from './shared/hooks/useSyncStatus';
 import { supabase } from './core/supabase';
 import { getPhotoBlobs } from './features/photo/services/photoStorage';
-// listConflicts removed (unused in this UI pass)
 import { startRealtimeSync, stopRealtimeSync } from './core/sync/realtime';
-// recordAudit removed (unused in this UI pass) (placeholder)
-// exportToJson, exportToGedcom, downloadText removed (unused in this UI pass)
 import { Button } from './shared/components/ui/Button';
 import { Modal } from './shared/components/ui/Modal';
 import { TreeWorkspace } from './features/tree/TreeWorkspace';
@@ -22,14 +19,18 @@ import { Home } from './features/home/Home';
 import { EmotionalTree } from './features/tree/components/EmotionalTree';
 import { PersonProfilePage } from './features/person/PersonProfilePage';
 
-type View = 'home' | 'tree' | 'person';
+// FASE 3: Componentes nuevos del Design System (se integrarán progresivamente en FASE 4)
 
+type View = 'home' | 'tree' | 'person';
 type ColorMode = 'light' | 'dark';
 
 export default function App() {
   const sync = useSyncStatus();
   const [view, setView] = useState<View>('home');
   const [colorMode, setColorMode] = useState<ColorMode>('light');
+
+  // FASE 3: Toast notifications state (commented out - will be implemented in FASE 4)
+  // const [toasts, setToasts] = useState<ToastProps[]>([]);
 
   // Initialize from localStorage or system preference
   useEffect(() => {
@@ -192,7 +193,15 @@ export default function App() {
       setMsg('Familiar agregado'); setQuickAdd(null); await load();
     } catch (e) { setMsg(String((e as Error)?.message ?? e)); }
   };
-  const syncNow = async () => { const r = await sync.syncNow(); setMsg(r.message); await load(); };
+  const syncNow = async () => {
+    try {
+      const r = await sync.syncNow();
+      setMsg(r.message);
+      await load();
+    } catch (e) {
+      setMsg(String((e as Error)?.message ?? e));
+    }
+  };
   // loadConflicts removed (unused in this UI pass)
   const recentActivity = personsT.slice(0, 5).map((p) => ({
     id: p.id, personName: p.firstName + ' ' + (p.lastName ?? ''),
