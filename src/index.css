@@ -1,7 +1,11 @@
 /* ==========================================================================
    ARBOL-GEN-PRO — Estilos Globales
-   Design System: Álbum Familiar Antiguo + Biblioteca Histórica + Minimalismo Moderno
+   Design System Premium: Tailwind CSS + Design Tokens
    ========================================================================== */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 /* Tokens de diseño (colores, tipografía, espaciado, sombras) */
 @import './shared/design-system/tokens.css';
@@ -9,26 +13,59 @@
 @import './shared/design-system/reset.css';
 @import './shared/design-system/utilities.css';
 
-body {
-  font-family: var(--font-sans-ui);
-  font-size: var(--text-base);
-  line-height: var(--line-height-normal);
-  color: var(--color-ink);
-  background-color: var(--color-paper);
-  margin: 0;
-  padding: 0;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
+/* Base styles */
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-900 antialiased;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  a {
+    @apply text-primary-600 no-underline transition-colors duration-200;
+
+    &:hover {
+      @apply text-primary-700 underline;
+    }
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar {
+    @apply w-2 h-2;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-slate-100;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-slate-300 rounded;
+
+    &:hover {
+      @apply bg-slate-400;
+    }
+  }
 }
 
-a {
-  color: var(--color-accent);
-  text-decoration: none;
-  transition: color var(--transition-fast);
-}
+/* Component styles */
+@layer components {
+  .container-px {
+    @apply px-4 sm:px-6 lg:px-8;
+  }
 
-a:hover {
-  color: var(--color-wood);
-  text-decoration: underline;
+  .section-padding {
+    @apply py-8 md:py-12 lg:py-16;
+  }
+
+  .glass-effect {
+    @apply bg-white/80 backdrop-blur-md;
+  }
+
+  .gradient-primary {
+    @apply bg-gradient-to-r from-primary-600 to-primary-700;
+  }
+
+  .gradient-secondary {
+    @apply bg-gradient-to-r from-secondary-600 to-secondary-700;
+  }
 }
