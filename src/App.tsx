@@ -12,6 +12,7 @@ import { useSyncStatus } from './shared/hooks/useSyncStatus';
 import { supabase } from './core/supabase';
 import { getPhotoBlobs } from './features/photo/services/photoStorage';
 import { startRealtimeSync, stopRealtimeSync } from './core/sync/realtime';
+import { createSampleFamilyTree } from './testing/seedTestData';
 
 import { PremiumLayout } from './shared/components/PremiumLayout';
 import { PremiumHome } from './shared/components/PremiumHome';
@@ -284,6 +285,25 @@ export default function App() {
     }
   };
 
+  // Load sample test data (dev only)
+  const handleLoadTestData = async () => {
+    try {
+      const { tree, persons, relationships } = createSampleFamilyTree();
+      
+      await treeRepository.create(tree as any);
+      await Promise.all(persons.map(p => personRepository.create(p as any)));
+      await Promise.all(relationships.map(r => relationshipRepository.create(r as any)));
+      
+      setTreeId(tree.id);
+      setTreeCenterId(persons[0].id);
+      setView('tree');
+      addToast(`Datos de prueba cargados: ${persons.length} personas, ${relationships.length} relaciones`, 'success');
+      await load();
+    } catch (error) {
+      addToast(`Error al cargar datos de prueba: ${error}`, 'error');
+    }
+  };
+
   // Render content based on view
   const renderContent = () => {
     switch (view) {
@@ -292,6 +312,7 @@ export default function App() {
           <PremiumHome
             onAddFamily={() => setWizardOpen(true)}
             onViewTree={() => setView('tree')}
+            onLoadTestData={handleLoadTestData}
             stats={{
               totalFamilyMembers: personsT.length,
               generations: Math.max(1, Math.ceil(personsT.length / 3)),

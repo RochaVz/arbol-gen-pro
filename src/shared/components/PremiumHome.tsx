@@ -11,6 +11,7 @@ import { Users, TreePine, ImageIcon, Calendar, Plus, ArrowRight } from 'lucide-r
 interface HomeProps {
   onAddFamily?: () => void;
   onViewTree?: () => void;
+  onLoadTestData?: () => void;
   stats?: {
     totalFamilyMembers: number;
     generations: number;
@@ -22,6 +23,7 @@ interface HomeProps {
 export const PremiumHome: React.FC<HomeProps> = ({
   onAddFamily,
   onViewTree,
+  onLoadTestData,
   stats = {
     totalFamilyMembers: 0,
     generations: 0,
@@ -96,6 +98,16 @@ export const PremiumHome: React.FC<HomeProps> = ({
                 >
                   Ver tutorial
                 </Button>
+                {/* Dev debug button */}
+                {import.meta.env.DEV && (
+                  <Button
+                    variant="ghost"
+                    size="lg"
+                    onClick={onLoadTestData}
+                  >
+                    Cargar datos de prueba
+                  </Button>
+                )}
               </div>
             </CardBody>
           </Card>
