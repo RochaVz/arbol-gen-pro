@@ -275,8 +275,8 @@ export default function App() {
             {installPrompt && <Button size="sm" variant="ghost" onClick={installApp}>Instalar</Button>}
             {supabase && !sessionEmail && (
               <div className="flex items-center gap-2">
-                <input placeholder="email" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} className="px-3 py-1.5 text-sm border border-border rounded-lg bg-surface" style={{ width: 140 }} />
-                <input type="password" placeholder="contraseña" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} className="px-3 py-1.5 text-sm border border-border rounded-lg bg-surface" style={{ width: 100 }} />
+                <input placeholder="email" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} className="px-3 py-2 text-base border border-border rounded-lg bg-surface" style={{ width: 140 }} />
+                <input type="password" placeholder="contraseña" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} className="px-3 py-2 text-base border border-border rounded-lg bg-surface" style={{ width: 100 }} />
                 <Button size="sm" onClick={doSignIn}>Entrar</Button>
                 <Button size="sm" variant="ghost" onClick={doSignUp}>Registrarse</Button>
               </div>
@@ -428,14 +428,14 @@ export default function App() {
       </main>
       <Modal isOpen={wizardOpen} onClose={() => setWizardOpen(false)} title="Crear tu árbol familiar">
         <div className="space-y-4">
-          <p className="text-sm text-wood font-serif-content">Responde estas dos preguntas y listo.</p>
+          <p className="text-base text-wood font-serif-content">Responde estas dos preguntas y listo.</p>
           <div className="space-y-3">
-            <label className="block text-sm font-medium text-wood">Nombre del árbol</label>
-            <input value={wizardTreeName} onChange={(e) => setWizardTreeName(e.target.value)} placeholder="Mi familia" className="w-full px-4 py-2 border border-border rounded-lg bg-surface text-ink" />
-            <label className="block text-sm font-medium text-wood">Tu nombre</label>
-            <input value={wizardMyName} onChange={(e) => setWizardMyName(e.target.value)} placeholder="Nombre" className="w-full px-4 py-2 border border-border rounded-lg bg-surface text-ink" />
-            <label className="block text-sm font-medium text-wood">Tu apellido (opcional)</label>
-            <input value={wizardLastName} onChange={(e) => setWizardLastName(e.target.value)} placeholder="Apellido" className="w-full px-4 py-2 border border-border rounded-lg bg-surface text-ink" />
+            <label className="block text-base font-medium text-wood">Nombre del árbol</label>
+            <input value={wizardTreeName} onChange={(e) => setWizardTreeName(e.target.value)} placeholder="Mi familia" className="w-full px-4 py-2.5 text-base border border-border rounded-lg bg-surface text-ink" />
+            <label className="block text-base font-medium text-wood">Tu nombre</label>
+            <input value={wizardMyName} onChange={(e) => setWizardMyName(e.target.value)} placeholder="Nombre" className="w-full px-4 py-2.5 text-base border border-border rounded-lg bg-surface text-ink" />
+            <label className="block text-base font-medium text-wood">Tu apellido (opcional)</label>
+            <input value={wizardLastName} onChange={(e) => setWizardLastName(e.target.value)} placeholder="Apellido" className="w-full px-4 py-2.5 text-base border border-border rounded-lg bg-surface text-ink" />
           </div>
           <div className="flex gap-2 justify-end pt-4">
             <Button variant="ghost" onClick={() => setWizardOpen(false)}>Cancelar</Button>
@@ -446,12 +446,12 @@ export default function App() {
       <Modal isOpen={!!quickAdd} onClose={closeQuickAdd} title={quickAdd ? quickTitle(quickAdd.kind) : ''}>
         <div className="space-y-4">
           <div className="space-y-3">
-            <label className="block text-sm font-medium text-wood">Nombre</label>
-            <input value={quickName} onChange={(e) => setQuickName(e.target.value)} placeholder="Nombre" className="w-full px-4 py-2 border border-border rounded-lg bg-surface text-ink" />
-            <label className="block text-sm font-medium text-wood">Apellido (opcional)</label>
-            <input value={quickLast} onChange={(e) => setQuickLast(e.target.value)} placeholder="Apellido" className="w-full px-4 py-2 border border-border rounded-lg bg-surface text-ink" />
-            <label className="block text-sm font-medium text-wood">Estado</label>
-            <select value={quickLife} onChange={(e) => setQuickLife(e.target.value as 'alive' | 'deceased' | 'unknown')} className="w-full px-4 py-2 border border-border rounded-lg bg-surface text-ink">
+            <label className="block text-base font-medium text-wood">Nombre</label>
+            <input value={quickName} onChange={(e) => setQuickName(e.target.value)} placeholder="Nombre" className="w-full px-4 py-2.5 text-base border border-border rounded-lg bg-surface text-ink" />
+            <label className="block text-base font-medium text-wood">Apellido (opcional)</label>
+            <input value={quickLast} onChange={(e) => setQuickLast(e.target.value)} placeholder="Apellido" className="w-full px-4 py-2.5 text-base border border-border rounded-lg bg-surface text-ink" />
+            <label className="block text-base font-medium text-wood">Estado</label>
+            <select value={quickLife} onChange={(e) => setQuickLife(e.target.value as 'alive' | 'deceased' | 'unknown')} className="w-full px-4 py-2.5 text-base border border-border rounded-lg bg-surface text-ink">
               <option value="alive">Vivo</option>
               <option value="deceased">Fallecido</option>
               <option value="unknown">Desconocido</option>
