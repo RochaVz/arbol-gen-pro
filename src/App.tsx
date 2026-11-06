@@ -20,7 +20,7 @@ import { EmotionalTree } from './features/tree/components/EmotionalTree';
 import { PersonProfilePage } from './features/person/PersonProfilePage';
 
 // FASE 4: Componentes nuevos del Design System - Integración progresiva
-import { Toast } from './shared/components';
+import { Toast, TabNav } from './shared/components';
 import type { ToastProps } from './shared/components';
 
 type View = 'home' | 'tree' | 'person';
@@ -307,16 +307,28 @@ export default function App() {
           </div>
         </div>
       </header>
-      <nav className="max-w-4xl mx-auto px-4 py-3 flex gap-2 flex-wrap">
-        <Button size="sm" variant={view === 'home' ? 'primary' : 'ghost'} onClick={() => setView('home')}>🏠 Inicio</Button>
-        <Button size="sm" variant={view === 'tree' ? 'primary' : 'ghost'} onClick={() => setView('tree')}>🌳 Árbol</Button>
-        {selectedPersonId && <Button size="sm" variant={view === 'person' ? 'primary' : 'ghost'} onClick={() => setView('person')}>👤 Persona</Button>}
-        <div className="flex-1" />
-        <select value={treeId} onChange={(e) => setTreeId(e.target.value)} className="px-3 py-1.5 text-sm border border-border rounded-lg bg-surface text-ink">
-          <option value="">(seleccionar árbol)</option>
-          {trees.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-        </select>
-        {trees.length === 0 && <Button size="sm" onClick={() => setWizardOpen(true)}>Crear árbol</Button>}
+      {/* FASE 4: TabNav horizontal navigation */}
+      <nav className="bg-surface border-b border-border sticky top-16 z-40">
+        <div className="max-w-7xl mx-auto px-4 flex items-center justify-between">
+          <TabNav
+            tabs={[
+              { id: 'home', label: 'Inicio', icon: '🏠' },
+              { id: 'tree', label: 'Árbol', icon: '🌳' },
+              ...(selectedPersonId ? [{ id: 'person', label: 'Persona', icon: '👤' }] : []),
+            ]}
+            activeTab={view}
+            onChange={(tabId) => setView(tabId as View)}
+            className="flex-1 border-b-0"
+          />
+          {/* Right-side controls: Tree selector and actions */}
+          <div className="flex items-center gap-2 ml-4">
+            <select value={treeId} onChange={(e) => setTreeId(e.target.value)} className="px-3 py-2 text-sm border border-border rounded-lg bg-surface text-ink">
+              <option value="">(seleccionar árbol)</option>
+              {trees.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+            {trees.length === 0 && <Button size="sm" onClick={() => setWizardOpen(true)}>Crear árbol</Button>}
+          </div>
+        </div>
       </nav>
       {msg && (
         <div className="max-w-4xl mx-auto px-4 mb-4">
