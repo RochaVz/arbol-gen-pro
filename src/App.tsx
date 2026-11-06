@@ -19,7 +19,9 @@ import { Home } from './features/home/Home';
 import { EmotionalTree } from './features/tree/components/EmotionalTree';
 import { PersonProfilePage } from './features/person/PersonProfilePage';
 
-// FASE 3: Componentes nuevos del Design System (se integrarán progresivamente en FASE 4)
+// FASE 4: Componentes nuevos del Design System - Integración progresiva
+import { Toast } from './shared/components';
+import type { ToastProps } from './shared/components';
 
 type View = 'home' | 'tree' | 'person';
 type ColorMode = 'light' | 'dark';
@@ -29,8 +31,17 @@ export default function App() {
   const [view, setView] = useState<View>('home');
   const [colorMode, setColorMode] = useState<ColorMode>('light');
 
-  // FASE 3: Toast notifications state (commented out - will be implemented in FASE 4)
-  // const [toasts, setToasts] = useState<ToastProps[]>([]);
+  // FASE 4: Toast notifications state
+  const [toasts, setToasts] = useState<ToastProps[]>([]);
+
+  const addToast = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info') => {
+    const id = uuidv7();
+    setToasts((prev) => [...prev, { id, message, type, onDismiss: removeToast }]);
+  };
+
+  const removeToast = (id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  };
 
   // Initialize from localStorage or system preference
   useEffect(() => {
@@ -196,10 +207,10 @@ export default function App() {
   const syncNow = async () => {
     try {
       const r = await sync.syncNow();
-      setMsg(r.message);
+      addToast(r.message, 'success');
       await load();
     } catch (e) {
-      setMsg(String((e as Error)?.message ?? e));
+      addToast(String((e as Error)?.message ?? e), 'error');
     }
   };
   // loadConflicts removed (unused in this UI pass)
@@ -457,6 +468,12 @@ export default function App() {
           {JSON.stringify(conflictOps, null, 2)}
         </pre>
       </Modal>
+      {/* FASE 4: Toast notifications container */}
+      <div className="fixed bottom-4 right-4 z-[1000] space-y-2 max-w-sm">
+        {toasts.map((toast) => (
+          <Toast key={toast.id} {...toast} />
+        ))}
+      </div>
     </div>
   );
 }
