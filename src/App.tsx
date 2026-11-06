@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   personRepository,
+  relationshipRepository,
   eventRepository,
   treeRepository,
   photoRepository,
@@ -14,7 +15,7 @@ import { startRealtimeSync, stopRealtimeSync } from './core/sync/realtime';
 
 import { PremiumLayout } from './shared/components/PremiumLayout';
 import { PremiumHome } from './shared/components/PremiumHome';
-import { TreeWorkspace } from './features/tree/TreeWorkspace';
+import { ReactFlowTree } from './shared/components/ReactFlowTree';
 import { PersonProfilePage } from './features/person/PersonProfilePage';
 import { ButtonV2 as Button, InputV2 as Input, Toast } from './shared/components/ui';
 import { Modal } from './shared/components/ui/Modal';
@@ -59,6 +60,7 @@ export default function App() {
   // State management
   const [trees, setTrees] = useState<Tree[]>([]);
   const [persons, setPersons] = useState<Person[]>([]);
+  const [relationships, setRelationships] = useState<any[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [treeId, setTreeId] = useState('');
@@ -77,7 +79,7 @@ export default function App() {
   const [wizardTreeName, setWizardTreeName] = useState('Mi familia');
   const [wizardMyName, setWizardMyName] = useState('');
   const [wizardLastName, setWizardLastName] = useState('');
-  const [selectedPersonId] = useState<string | null>(null);
+  const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
 
   // Setup install prompt
   useEffect(() => {
@@ -123,6 +125,7 @@ export default function App() {
 
       const personsList = await personRepository.list();
       setPersons(personsList);
+      setRelationships(await relationshipRepository.list());
       setEvents(await eventRepository.list());
 
       const photoList = await photoRepository.list();
@@ -181,6 +184,7 @@ export default function App() {
     treeId ? arr.filter((x) => x.treeId === treeId) : arr;
 
   const personsT = inTree(persons) as Person[];
+  const relationshipsT = inTree(relationships) as any[];
   const eventsT = inTree(events) as Event[];
 
   // Auth handlers
@@ -305,12 +309,22 @@ export default function App() {
             </Button>
           </div>
         ) : (
-          <TreeWorkspace>
-            <div className="space-y-6">
+          <div className="space-y-6">
+            <div>
               <h2 className="text-2xl font-bold text-slate-900">Tu Árbol Genealógico</h2>
-              <p className="text-slate-600">Visualización de tu árbol genealógico con {personsT.length} miembros</p>
+              <p className="text-slate-600">Visualización interactiva de tu árbol genealógico con {personsT.length} miembros</p>
             </div>
-          </TreeWorkspace>
+            <ReactFlowTree
+              persons={personsT}
+              relationships={relationshipsT}
+              photos={personPhotoUrls}
+              treeCenterId={treeCenterId}
+              onNodeClick={(personId) => {
+                setSelectedPersonId(personId);
+                setView('person');
+              }}
+            />
+          </div>
         );
       case 'person':
         return selectedPersonId ? (
