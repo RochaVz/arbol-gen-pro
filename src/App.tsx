@@ -20,7 +20,7 @@ import { EmotionalTree } from './features/tree/components/EmotionalTree';
 import { PersonProfilePage } from './features/person/PersonProfilePage';
 
 // FASE 4: Componentes nuevos del Design System - Integración progresiva
-import { Toast, TabNav } from './shared/components';
+import { Toast, TabNav, EmptyState } from './shared/components';
 import type { ToastProps } from './shared/components';
 
 type View = 'home' | 'tree' | 'person';
@@ -388,17 +388,30 @@ export default function App() {
           {/* Contenido principal - vistas diferenciadas */}
         {view === 'home' && (
           <div className="flex-1 flex flex-col">
-            <Home
-              treeName={trees.find((t) => t.id === treeId)?.name ?? 'Mi familia'}
-              treeSubtitle="Tu historia familiar en un solo lugar"
-              treePhotoUrl={undefined}
-              familyMembers={personsT}
-              recentActivity={recentActivity}
-              memories={memories}
-              onViewTree={() => setView('tree')}
-              onAddMember={() => trees.length === 0 ? setWizardOpen(true) : (treeCenterId ? openQuickAdd(treeCenterId, 'child') : setWizardOpen(true))}
-              onViewMemory={() => {}}
-            />
+            {trees.length === 0 ? (
+              <EmptyState
+                icon="🌳"
+                title="Comienza tu árbol genealógico"
+                description="Crea tu primer árbol familiar y conecta con tu historia."
+                action={
+                  <Button onClick={() => setWizardOpen(true)} size="lg">
+                    Crear árbol familiar
+                  </Button>
+                }
+              />
+            ) : (
+              <Home
+                treeName={trees.find((t) => t.id === treeId)?.name ?? 'Mi familia'}
+                treeSubtitle="Tu historia familiar en un solo lugar"
+                treePhotoUrl={undefined}
+                familyMembers={personsT}
+                recentActivity={recentActivity}
+                memories={memories}
+                onViewTree={() => setView('tree')}
+                onAddMember={() => trees.length === 0 ? setWizardOpen(true) : (treeCenterId ? openQuickAdd(treeCenterId, 'child') : setWizardOpen(true))}
+                onViewMemory={() => {}}
+              />
+            )}
           </div>
         )}
         {view === 'tree' && (
