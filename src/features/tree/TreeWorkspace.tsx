@@ -14,6 +14,7 @@ import React from 'react';
 export const TreeWorkspace = React.forwardRef<HTMLDivElement, {
   className?: string;
   style?: React.CSSProperties;
+  children?: React.ReactNode;
 }>(({ className = 'tree-workspace', style, children }, ref) => {
   return (
     <div

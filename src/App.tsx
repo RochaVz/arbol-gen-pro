@@ -325,7 +325,7 @@ export default function App() {
             <div className="space-y-2">
               <Button
                 variant="ghost"
-                size="icon"
+                size="sm"
                 onClick={() => setView('home')}
                 className="flex items-center justify-center gap-2 rounded-lg hover:bg-surface/30 transition-colors"
                 aria-label="Inicio"
@@ -334,7 +334,7 @@ export default function App() {
               </Button>
               <Button
                 variant="ghost"
-                size="icon"
+                size="sm"
                 onClick={() => setView('tree')}
                 className="flex items-center justify-center gap-2 rounded-lg hover:bg-surface/30 transition-colors"
                 aria-label="Árbol"
@@ -343,7 +343,7 @@ export default function App() {
               </Button>
               <Button
                 variant="ghost"
-                size="icon"
+                size="sm"
                 onClick={() => setView('person')}
                 className="flex items-center justify-center gap-2 rounded-lg hover:bg-surface/30 transition-colors"
                 aria-label="Perfil"
@@ -354,43 +354,39 @@ export default function App() {
           </nav>
 
           {/* Contenido principal - vistas diferenciadas */}
+        {view === 'home' && (
           <div className="flex-1 flex flex-col">
-          <Home
-            treeName={trees.find((t) => t.id === treeId)?.name ?? 'Mi familia'}
-            treeSubtitle="Tu historia familiar en un solo lugar"
-            treePhotoUrl={undefined}
-            familyMembers={personsT}
-            recentActivity={recentActivity}
-            memories={memories}
-            onViewTree={() => setView('tree')}
-            onAddMember={() => trees.length === 0 ? setWizardOpen(true) : (treeCenterId ? openQuickAdd(treeCenterId, 'child') : setWizardOpen(true))}
-            onViewMemory={() => {}}
-          />
-</div>
-
+            <Home
+              treeName={trees.find((t) => t.id === treeId)?.name ?? 'Mi familia'}
+              treeSubtitle="Tu historia familiar en un solo lugar"
+              treePhotoUrl={undefined}
+              familyMembers={personsT}
+              recentActivity={recentActivity}
+              memories={memories}
+              onViewTree={() => setView('tree')}
+              onAddMember={() => trees.length === 0 ? setWizardOpen(true) : (treeCenterId ? openQuickAdd(treeCenterId, 'child') : setWizardOpen(true))}
+              onViewMemory={() => {}}
+            />
+          </div>
         )}
         {view === 'tree' && (
           <TreeWorkspace>
-          <EmotionalTree
-            persons={personsT}
-            relationships={relsT}
-            centerId={treeCenterId}
-            depth={treeDepth}
-            onSelectPerson={(id) => { setSelectedPersonId(id); setView('person'); }}
-            photoUrls={personPhotoUrls}
-            onAddParent={(id) => openQuickAdd(id, 'father')}
-            onAddChild={(id) => openQuickAdd(id, 'child')}
-            onAddPartner={(id) => openQuickAdd(id, 'spouse')}
-)
-
-)
-</TreeWorkspace>
-
-          />
+            <EmotionalTree
+              persons={personsT}
+              relationships={relsT}
+              centerId={treeCenterId}
+              depth={treeDepth}
+              onSelectPerson={(id) => { setSelectedPersonId(id); setView('person'); }}
+              photoUrls={personPhotoUrls}
+              onAddParent={(id) => openQuickAdd(id, 'father')}
+              onAddChild={(id) => openQuickAdd(id, 'child')}
+              onAddPartner={(id) => openQuickAdd(id, 'spouse')}
+            />
+          </TreeWorkspace>
         )}
         {view === 'person' && selectedPerson && (
           <PersonProfilePage
-            person={selectedPerson}
+            personId={selectedPerson.id}
             photoUrl={personPhotoUrls[selectedPerson.id]}
             parents={personParents}
             children={personChildren}
