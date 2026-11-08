@@ -7,6 +7,7 @@ import {
 import { User, MapPin, Calendar } from 'lucide-react';
 import type { Person } from '../../../core/db';
 import { cn } from '../../utils/cn';
+import { partialDateToString } from '../../utils/date';
 
 interface FamilyNodeData {
   label: string;
@@ -79,13 +80,7 @@ export const FamilyNode: React.FC<NodeProps<FamilyNodeData>> = ({
             <Calendar className="w-3 h-3 flex-shrink-0" />
             <span>
               Nac.:{' '}
-              {typeof person.birthDate === 'string'
-                ? person.birthDate
-                : new Date(person.birthDate as any).toLocaleDateString('es-MX', {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric',
-                  })}
+              {partialDateToString(person.birthDate as any)}
             </span>
           </div>
         )}
@@ -95,13 +90,7 @@ export const FamilyNode: React.FC<NodeProps<FamilyNodeData>> = ({
             <Calendar className="w-3 h-3 flex-shrink-0" />
             <span>
               Fall.:{' '}
-              {typeof person.deathDate === 'string'
-                ? person.deathDate
-                : new Date(person.deathDate as any).toLocaleDateString('es-MX', {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric',
-                  })}
+              {partialDateToString(person.deathDate as any)}
             </span>
           </div>
         )}

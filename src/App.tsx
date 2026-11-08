@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, lazy, Suspense, useMemo } from 'react';
+import { partialDateToString } from './shared/utils/date';
 import {
   personRepository,
   relationshipRepository,
@@ -13,11 +14,12 @@ import { supabase } from './core/supabase';
 import { getPhotoBlobs } from './features/photo/services/photoStorage';
 import { startRealtimeSync, stopRealtimeSync } from './core/sync/realtime';
 import { createSampleFamilyTree } from './testing/seedTestData';
+import { parentsOf, childrenOf, spousesOf } from './features/tree/utils/treeLayout';
 
 import { PremiumLayout } from './shared/components/PremiumLayout';
-import { PremiumHome } from './shared/components/PremiumHome';
-import { ReactFlowTree } from './shared/components/ReactFlowTree';
-import { PersonProfilePage } from './features/person/PersonProfilePage';
+const ReactFlowTree = lazy(() => import('./shared/components/ReactFlowTree').then(m => ({ default: m.ReactFlowTree })));
+const PersonProfilePage = lazy(() => import('./features/person/PersonProfilePage').then(m => ({ default: m.PersonProfilePage })));
+const PremiumHome = lazy(() => import('./shared/components/PremiumHome').then(m => ({ default: m.PremiumHome })));
 import { ButtonV2 as Button, InputV2 as Input, Toast } from './shared/components/ui';
 import { Modal } from './shared/components/ui/Modal';
 import { Plus, Mail, Lock } from 'lucide-react';
@@ -65,7 +67,7 @@ export default function App() {
   const [events, setEvents] = useState<Event[]>([]);
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [treeId, setTreeId] = useState('');
-  const [treeCenterId, setTreeCenterId] = useState<string>('');
+  const [treeCenterOverride, setTreeCenterOverride] = useState<string>('');
   const [personPhotoUrls, setPersonPhotoUrls] = useState<Record<string, string>>({});
 
   // Auth state
@@ -117,7 +119,16 @@ export default function App() {
     };
   }, []);
 
-  // Load data
+  // Cleanup object URLs on unmount
+  useEffect(() => {
+    return () => {
+      Object.values(personPhotoUrls).forEach((u) => {
+        try {
+          URL.revokeObjectURL(u);
+        } catch {}
+      });
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const load = async () => {
     try {
       const t = await treeRepository.list();
@@ -164,21 +175,14 @@ export default function App() {
     void load();
   }, []);
 
-  // Sync tree person
-  useEffect(() => {
-    if (!treeId) {
-      setTreeCenterId('');
-      return;
-    }
+  // Derived tree center
+  const treeCenterId = useMemo(() => {
+    if (!treeId) return '';
     const list = persons.filter((p: any) => p.treeId === treeId && !p.deletedAt);
-    if (list.length === 0) {
-      setTreeCenterId('');
-      return;
-    }
-    if (!treeCenterId || !list.some((p: any) => p.id === treeCenterId)) {
-      setTreeCenterId(list[0].id);
-    }
-  }, [treeId, persons, treeCenterId]);
+    if (list.length === 0) return '';
+    if (treeCenterOverride && list.some((p: any) => p.id === treeCenterOverride)) return treeCenterOverride;
+    return list[0].id;
+  }, [treeId, persons, treeCenterOverride]);
 
   // Filter data by tree
   const inTree = (arr: { treeId?: string }[]) =>
@@ -275,7 +279,7 @@ export default function App() {
       } as any);
 
       setTreeId(t.entity.id);
-      setTreeCenterId(me.entity.id);
+      setTreeCenterOverride(me.entity.id);
       setWizardOpen(false);
       setView('tree');
       addToast('Árbol creado. Comienza a agregar familiares.', 'success');
@@ -295,7 +299,7 @@ export default function App() {
       await Promise.all(relationships.map(r => relationshipRepository.create(r as any)));
       
       setTreeId(tree.id);
-      setTreeCenterId(persons[0].id);
+      setTreeCenterOverride(persons[0].id);
       setView('tree');
       addToast(`Datos de prueba cargados: ${persons.length} personas, ${relationships.length} relaciones`, 'success');
       await load();
@@ -347,10 +351,113 @@ export default function App() {
             />
           </div>
         );
-      case 'person':
-        return selectedPersonId ? (
-          <PersonProfilePage personId={selectedPersonId} />
-        ) : null;
+      case 'person': {
+        const person = persons.find((p) => p.id === selectedPersonId);
+        if (!person) return null;
+        const rels = relationships.filter((r) => !r.deletedAt);
+        const parentIds = parentsOf(person.id, rels);
+        const childIds = childrenOf(person.id, rels);
+        const partnerIds = spousesOf(person.id, rels);
+        const parents = persons.filter((p) => parentIds.includes(p.id));
+        const children = persons.filter((p) => childIds.includes(p.id));
+        const partners = persons.filter((p) => partnerIds.includes(p.id));
+        const personEvents = eventsT.filter((e: any) => e.personId === person.id || (Array.isArray(e.personIds) && e.personIds.includes(person.id)));
+        const personPhotos = photos.filter((ph: any) => ph.personId === person.id && !ph.deletedAt);
+        return (
+          <PersonProfilePage
+            personId={person.id}
+            photoUrl={personPhotoUrls[person.id]}
+            firstName={person.firstName}
+            lastName={person.lastName}
+            birthDate={person.birthDate ? partialDateToString(person.birthDate as any) : undefined}
+            deathDate={person.deathDate ? partialDateToString(person.deathDate as any) : undefined}
+            lifeStatus={person.lifeStatus === 'deceased' ? 'deceased' : 'living'}
+            parents={parents}
+            children={children}
+            partners={partners}
+            events={personEvents}
+            gallery={personPhotos.map((ph: any) => ({ url: personPhotoUrls[ph.personId] }))}
+            documents={[]}
+            onSelectPerson={(id) => {
+              setSelectedPersonId(id);
+              setView('person');
+            }}
+            onBack={() => {
+              setSelectedPersonId(null);
+              setView('tree');
+            }}
+            onEdit={() => {}}
+            onAddPhoto={() => {}}
+            onAddParent={() => {}}
+            onAddChild={() => {}}
+            onAddPartner={() => {}}
+            onAddEvent={() => {}}
+            onAddDocument={() => {}}
+          />
+        );
+      }
+      case 'family':
+        return (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-slate-900">Mi Familia</h2>
+            <p className="text-slate-600">Lista de miembros del árbol actual</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {personsT.map((p) => (
+                <div
+                  key={p.id}
+                  onClick={() => {
+                    setSelectedPersonId(p.id);
+                    setView('person');
+                  }}
+                  className="bg-white rounded-xl border border-slate-200 p-4 cursor-pointer hover:shadow-md transition-shadow"
+                >
+                  <div className="flex items-center gap-3">
+                    {personPhotoUrls[p.id] ? (
+                      <img src={personPhotoUrls[p.id]} alt={p.firstName} className="w-12 h-12 rounded-full object-cover" />
+                    ) : (
+                      <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
+                        {p.firstName?.charAt(0)}
+                      </div>
+                    )}
+                    <div>
+                      <p className="font-semibold text-slate-900">{p.firstName} {p.lastName}</p>
+                      <p className="text-sm text-slate-500">{p.lifeStatus === 'deceased' ? 'Fallecido' : 'Vivo'}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {personsT.length === 0 && <p className="text-slate-500">Sin miembros. Crea un árbol o carga datos de prueba.</p>}
+            </div>
+          </div>
+        );
+      case 'photos':
+        return (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-slate-900">Fotografías</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {Object.entries(personPhotoUrls).map(([pid, url]) => (
+                <div key={pid} className="aspect-square rounded-lg overflow-hidden bg-slate-100 border border-slate-200">
+                  <img src={url} alt="foto" className="w-full h-full object-cover" />
+                </div>
+              ))}
+              {Object.keys(personPhotoUrls).length === 0 && <p className="text-slate-500">Sin fotos.</p>}
+            </div>
+          </div>
+        );
+      case 'settings':
+        return (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-slate-900">Configuración</h2>
+            <p className="text-slate-600">Próximamente: opciones de cuenta, sincronización y preferencias.</p>
+          </div>
+        );
+      case 'help':
+        return (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-slate-900">Ayuda</h2>
+            <p className="text-slate-600">Próximamente: preguntas frecuentes y guías de uso.</p>
+          </div>
+        );
       default:
         return (
           <div className="text-center py-12">
@@ -401,7 +508,9 @@ export default function App() {
         </div>
       }
     >
+       <Suspense fallback={<div className="p-8 text-center text-slate-500">Cargando...</div>}>
       {renderContent()}
+       </Suspense>
 
       {/* Auth Modal */}
       <Modal

@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useEffect } from 'react';
 import ReactFlow, {
   Controls,
   Background,
@@ -14,6 +14,7 @@ import type { Person, Relationship } from '../../core/db';
 import { FamilyNode } from './nodes/FamilyNode';
 import { FamilyRelationship } from './edges/FamilyRelationship';
 import { cn } from '../utils/cn';
+import { computeLayout } from '../../features/tree/utils/treeLayout';
 
 interface ReactFlowTreeProps {
   persons: Person[];
@@ -44,38 +45,50 @@ export const ReactFlowTree: React.FC<ReactFlowTreeProps> = ({
   const edgeTypes = useMemo(() => ({ familyEdge: FamilyRelationship }), []);
 
   // Generate nodes from persons
-  const initialNodes: Node<FamilyNodeData>[] = useMemo(
-    () =>
-      persons.map((person, index) => {
-        const isTreeCenter = person.id === treeCenterId;
-        const isAlive = person.lifeStatus !== 'deceased';
+  const initialNodes: Node<FamilyNodeData>[] = useMemo(() => {
+    const centerId =
+      treeCenterId && persons.some((p) => p.id === treeCenterId)
+        ? treeCenterId
+        : persons[0]?.id;
+    let posMap: Map<string, { x: number; y: number }> | null = null;
+    if (centerId && relationships.length > 0) {
+      try {
+        const res = computeLayout(centerId, 3, 'branch', relationships);
+        posMap = res.pos;
+      } catch {
+        posMap = null;
+      }
+    }
 
-        return {
-          id: person.id,
-          data: {
-            label: `${person.firstName} ${person.lastName || ''}`.trim(),
-            person,
-            photoUrl: photos[person.id],
-            isAlive,
-            isTreeCenter,
-          },
-          position: {
-            // Simple grid layout (can be improved with better algorithm)
-            x: (index % 5) * 280,
-            y: Math.floor(index / 5) * 350,
-          },
-          type: 'familyNode',
-          draggable: true,
-        };
-      }),
-    [persons, treeCenterId, photos]
-  );
+    return persons.map((person, index) => {
+      const isTreeCenter = person.id === treeCenterId;
+      const isAlive = person.lifeStatus !== 'deceased';
+      const pt = posMap?.get(person.id);
+      const position = pt
+        ? { x: pt.x - 95, y: pt.y - 75 }
+        : { x: (index % 5) * 280, y: Math.floor(index / 5) * 350 };
+
+      return {
+        id: person.id,
+        data: {
+          label: `${person.firstName} ${person.lastName || ''}`.trim(),
+          person,
+          photoUrl: photos[person.id],
+          isAlive,
+          isTreeCenter,
+        },
+        position,
+        type: 'familyNode',
+        draggable: true,
+      };
+    });
+  }, [persons, treeCenterId, photos, relationships]);
 
   // Generate edges from relationships
   const initialEdges: Edge[] = useMemo(
     () =>
       relationships.map((rel, index) => ({
-        id: `edge-${index}`,
+        id: `edge-${rel.id || index}`,
         source: rel.person1Id || '',
         target: rel.person2Id || '',
         type: 'familyEdge',
@@ -87,8 +100,17 @@ export const ReactFlowTree: React.FC<ReactFlowTreeProps> = ({
     [relationships]
   );
 
-  const [nodes] = useNodesState(initialNodes);
-  const [edges] = useEdgesState(initialEdges);
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+
+  // Sync when props change
+  useEffect(() => {
+    setNodes(initialNodes);
+  }, [initialNodes, setNodes]);
+  useEffect(() => {
+    setEdges(initialEdges);
+  }, [initialEdges, setEdges]);
+
   const { fitView } = useReactFlow();
 
   const onNodeClickHandler = useCallback(
@@ -116,6 +138,8 @@ export const ReactFlowTree: React.FC<ReactFlowTreeProps> = ({
       <ReactFlow
         nodes={nodes}
         edges={edges}
+         onNodesChange={onNodesChange}
+         onEdgesChange={onEdgesChange}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         onNodeClick={onNodeClickHandler}

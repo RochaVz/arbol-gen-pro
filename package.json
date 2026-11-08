@@ -18,9 +18,12 @@
     "clsx": "^2.0.0",
     "dexie": "^4.4.6",
     "framer-motion": "^11.0.3",
+    "i18next": "^27.0.1",
+    "i18next-browser-languagedetector": "^8.3.0",
     "lucide-react": "^0.408.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
+    "react-i18next": "^18.0.0",
     "reactflow": "^11.10.1",
     "tailwind-merge": "^2.2.0",
     "zustand": "^4.4.1"

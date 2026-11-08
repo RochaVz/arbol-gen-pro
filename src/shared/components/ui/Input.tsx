@@ -1,4 +1,5 @@
 import React from "react";
+import { useId } from 'react';
 import type { InputHTMLAttributes } from 'react';
 
 /**
@@ -14,7 +15,8 @@ export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
   ({ label, error, helper, size = 'md', className = '', id, ...props }, ref) => {
-    const inputId = id || `input-${Math.random().toString(36).slice(2)}`;
+    const generatedId = useId();
+    const inputId = id || `input-${generatedId}`;
 
     const sizes: Record<string, string> = {
       sm: 'px-3 py-1.5 text-sm min-h-[36px]',

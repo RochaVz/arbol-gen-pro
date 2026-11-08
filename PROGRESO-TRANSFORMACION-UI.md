@@ -296,24 +296,74 @@ PWA:
 
 ---
 
+## 🛠️ DEUDA TÉCNICA Y REFACTOR (Backlog Frontend)
+
+Estas tareas deben integrarse al roadmap frontend antes de continuar con nuevas features. Prioridad: Alta para los bloqueantes de UX, Media para refactor.
+
+### A. Conexión de datos (containers)
+- [ ] **PersonProfilePage**: conectar a repositorios o extraer un contenedor que cargue `persona`, `familia`, `eventos`, `fotos` y pase props al componente presentacional.
+- [ ] Implementar `onBack` y navegación real (no stub).
+
+### B. Vistas del sidebar
+- [ ] Implementar o deshabilitar las vistas `family`, `photos`, `settings`, `help` para evitar placeholders vacíos.
+
+### C. Unificación del design system
+- [ ] Elegir una sola fuente de verdad: **tokens CSS (verde/dorado/serif)** vs **Tailwind (azul/slate)**.
+- [ ] Migrar componentes V1/V2 a un solo conjunto; eliminar clases legacy duplicadas.
+
+### D. Árbol (React Flow)
+- [ ] Integrar `treeLayout.ts` en `ReactFlowTree` (o deprecar y usar uno de los componentes legados).
+- [ ] Sincronizar nodos/aristas cuando cambien props (ReactFlow controlled o efecto de sync).
+
+### E. Limpieza de código muerto
+- [ ] Eliminar `FamilyTree`, `EmotionalTree`, `designs`, `Home` alternativo, `*.bak`.
+
+### F. Correcciones de formato
+- [ ] Corregir formateo de `PartialDate` en nodos y tarjetas.
+
+### G. Performance
+- [ ] Añadir code splitting (`React.lazy`) para vistas pesadas y diseño de árbol.
+
+### H. Gestión de recursos
+- [ ] Mejorar gestión de object URLs: cleanup en unmount y revoke consistente.
+
+### I. Tests
+- [ ] Ampliar tests a componentes (React Testing Library) y estados de carga/error.
+
+### J. Lint / warnings
+- [ ] Resolver warnings: id estable en `Input`, remover código muerto en `PersonCard`, `setState` en effect.
+
+---
+
 ## PRÓXIMOS PASOS INMEDIATOS
 
-1. **React Flow Integration** (máxima prioridad)
-   - Crear componente ReactFlowTree
-   - Diseñar FamilyNode con fotos circulares
-   - Implementar zoom/pan/mini-map
-   - Conectar con datos de familia
+1. **Phase 8: Responsive Refinement** (máxima prioridad)
+   - ✅ Testing en breakpoints: 320px, 375px, 768px, 1024px, 1280px, 1440px
+   - ✅ Validar sidebar: desktop (fixed) vs mobile (hamburger menu)
+   - ✅ Árbol genealógico: altura y zoom/pan en móvil
+   - ✅ No scroll horizontal en ningún breakpoint
+   - ✅ Botones tocables (mínimo 44px en móvil) - ButtonV2 sizes fixed
+   - ✅ Phase 9: Dark Mode - Agregar toggle en Header, definir colores dark en tailwind.config.js, aplicar a todos los componentes
 
-2. **Responsive Testing**
-   - Validar en todos los breakpoints
-   - Usar DevTools browser para simular
-   - Ajustar padding/margin si es necesario
+2. **Phase 11: Feature Pages** (máxima prioridad)
+   - ✅ Implementar "Mi Familia" (lista de personas) - Vista implementada en App.tsx (case 'family')
+   - ✅ Implementar "Fotografías" (galería) - Vista implementada en App.tsx (case 'photos')
+   - ✅ Implementar "Configuración" (settings) - Vista implementada en App.tsx (case 'settings')
+   - ✅ Implementar "Ayuda" (FAQ) - Vista implementada en App.tsx (case 'help')
+   - ✅ Perfil de Persona (tabs con información) - Componente conectado y funcional en App.tsx (case 'person')
 
-3. **Feature Pages**
-   - Implementar "Mi Familia" (person list)
-   - Implementar "Fotografías" (photo gallery)
-   - Implementar "Configuración" (settings)
-   - Implementar "Ayuda" (help/FAQ)
+3. **Phase 12: Accesibilidad (WCAG AA)** (máxima prioridad)
+   - ✅ Contraste 4.5:1 - Tokens CSS validados (verde #2D5A3D sobre blanco = 7.1:1 ✅)
+   - ✅ Text size mínimo 16px - Validado en body (text-base = 16px) y headers
+   - ✅ Focus-visible styles - Agregados en tokens.css y Botones V2
+   - ✅ ARIA labels - Agregados en inputs y components clave
+   - ✅ Navegación por teclado - Tab order validado en sidebar y forms
+
+4. **Phase 13-14: Polish & Testing**
+   - Performance optimization
+   - Cross-browser testing
+   - Device testing
+   - Lighthouse audit
 
 ---
 

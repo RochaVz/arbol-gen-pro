@@ -18,8 +18,11 @@ const buttonVariants = cva(
           'bg-red-600 text-white hover:bg-red-700 active:bg-red-800 shadow-sm hover:shadow-md',
       },
       size: {
-        sm: 'px-3 py-1.5 text-sm h-8',
-        md: 'px-4 py-2 text-base h-10',
+sm: 'px-3 py-1.5 text-sm min-h-[44px] rounded-lg',
+md: 'px-4 py-2 text-base min-h-[44px] rounded-lg',
+        
+
+        
         lg: 'px-6 py-3 text-lg h-12',
       },
       fullWidth: {

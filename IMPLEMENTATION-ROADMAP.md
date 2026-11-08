@@ -824,3 +824,21 @@ Antes de considerar completada la FASE 2-6:
 **Listo para comenzar FASE 2**  
 **Equipo Senior Frontend + UX/UI**  
 *5 Noviembre, 2026*
+---
+
+## 🔧 FASE 7.6 — Deuda técnica y refactor (Frontend)
+
+Backlog consolidado de mejoras técnicas que deben cerrarse antes de nuevas features.
+
+| # | Tarea | Prioridad |
+|---|-------|-----------|
+| 7.6.1 | PersonProfilePage: conectar a repositorios o extraer contenedor (persona/familia/eventos/fotos) + onBack/navegación | Alta |
+| 7.6.2 | Implementar o deshabilitar vistas sidebar `family`, `photos`, `settings`, `help` | Alta |
+| 7.6.3 | Unificar design system: elegir tokens CSS (verde/dorado/serif) vs Tailwind (azul/slate); migrar V1/V2; eliminar legacy | Alta |
+| 7.6.4 | Integrar `treeLayout.ts` en `ReactFlowTree` o deprecar; sync nodos/aristas con props | Media |
+| 7.6.5 | Eliminar código muerto: `FamilyTree`, `EmotionalTree`, `designs`, `Home` alt, `*.bak` | Media |
+| 7.6.6 | Corregir formateo de `PartialDate` en nodos y tarjetas | Media |
+| 7.6.7 | Code splitting (`React.lazy`) para vistas pesadas y diseño de árbol | Media |
+| 7.6.8 | Gestión de object URLs: cleanup en unmount + revoke consistente | Media |
+| 7.6.9 | Tests de componentes (RTL) + estados carga/error | Media |
+| 7.6.10 | Resolver warnings lint: id estable en `Input`, código muerto en `PersonCard`, setState en effect | Baja |

@@ -1,5 +1,6 @@
 import React from "react";
 import type { Person } from '../../core/db/schema';
+import { partialDateToString } from '../utils/date';
 
 /**
  * PersonCard — Tarjeta premium de persona.
@@ -18,8 +19,8 @@ export interface PersonCardProps {
 }
 
 function formatLifeDates(p: Person): string {
-  const birth = p.birthDate?.year ? String(p.birthDate.year) : '—';
-  const death = p.deathDate?.year ? String(p.deathDate.year) : '—';
+  const birth = p.birthDate ? partialDateToString(p.birthDate as any) : '—';
+  const death = p.deathDate ? partialDateToString(p.deathDate as any) : '—';
   if (p.lifeStatus === 'deceased' && p.deathDate?.year) {
     return `${birth} – ${death}`;
   }
@@ -46,7 +47,6 @@ export const PersonCard = React.forwardRef<
       photoUrl,
       onSelect,
       compact = false,
-      showRelationships = true,
       deceasedMark = true,
       className = '',
     },
@@ -130,22 +130,6 @@ export const PersonCard = React.forwardRef<
             <p className="mt-2 text-sm sm:text-base text-ink font-serif-content line-clamp-2 leading-relaxed">
               {person.biography}
             </p>
-          )}
-
-          {/* Relaciones importantes */}
-          {showRelationships && !compact && false && (
-            <div className="mt-3 pt-3 border-t border-border">
-              <p className="text-xs text-wood uppercase tracking-wider mb-2">
-                Conexiones familiares
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {[].map((rel: any) => (
-                  <span key={rel.id} className="px-2 py-1 text-[10px] bg-paper border border-parchment rounded-full text-wood font-medium">
-                    {rel.type}
-                  </span>
-                ))}
-              </div>
-            </div>
           )}
         </div>
       </div>

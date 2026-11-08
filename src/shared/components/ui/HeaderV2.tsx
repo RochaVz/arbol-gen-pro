@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '../../utils/cn';
 
@@ -11,10 +11,21 @@ interface HeaderProps extends React.HTMLAttributes<HTMLDivElement> {
 
 export const Header = React.forwardRef<HTMLDivElement, HeaderProps>(
   ({ className, title, subtitle, actions, breadcrumb, children, ...props }, _ref) => {
+    const [darkMode, setDarkMode] = useState(() => {
+      const stored = localStorage.getItem('dark-mode');
+      if (stored) return stored === 'true';
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    });
+    useEffect(() => {
+      document.documentElement.classList.toggle('dark', darkMode);
+      localStorage.setItem('dark-mode', darkMode.toString());
+    }, [darkMode, setDarkMode]);
+
     return (
       <header
         className={cn(
           'sticky top-0 z-30 border-b border-slate-200 bg-white/80 backdrop-blur-md shadow-sm',
+          darkMode ? 'bg-neutral-900/80' : 'bg-white/80',
           className
         )}
         {...props}
