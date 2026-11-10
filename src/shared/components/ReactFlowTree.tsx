@@ -1,5 +1,7 @@
 import React, { useCallback, useMemo, useEffect } from 'react';
-import ReactFlow, {
+import {
+  ReactFlowProvider,
+  ReactFlow,
   Controls,
   Background,
   MiniMap,
@@ -129,7 +131,8 @@ export const ReactFlowTree: React.FC<ReactFlowTreeProps> = ({
   }, [nodes.length, fitView]);
 
   return (
-    <div
+    <ReactFlowProvider>
+      <div
       className={cn(
         'w-full h-[600px] bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg border border-slate-200 shadow-sm overflow-hidden',
         className
@@ -179,6 +182,7 @@ export const ReactFlowTree: React.FC<ReactFlowTreeProps> = ({
         />
       </ReactFlow>
     </div>
+    </ReactFlowProvider>
   );
 };
 
