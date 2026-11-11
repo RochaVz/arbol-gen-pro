@@ -1,3 +1,10 @@
+﻿/* ARBOL-GEN-PRO Design Tokens (FASE 2)
+   ========================================================================== */
+@import './shared/design-system/tokens.css';
+@import './shared/design-system/typography.css';
+@import './shared/design-system/reset.css';
+@import './shared/design-system/utilities.css';
+
 /* ==========================================================================
    ARBOL-GEN-PRO — Estilos Globales
    Design System Premium: Tailwind CSS + Design Tokens
@@ -6,12 +13,6 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-/* Tokens de diseño (colores, tipografía, espaciado, sombras) */
-@import './shared/design-system/tokens.css';
-@import './shared/design-system/typography.css';
-@import './shared/design-system/reset.css';
-@import './shared/design-system/utilities.css';
 
 /* Base styles */
 @layer base {
