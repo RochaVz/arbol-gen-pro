@@ -17,6 +17,7 @@ import { FamilyNode } from './nodes/FamilyNode';
 import { FamilyRelationship } from './edges/FamilyRelationship';
 import { cn } from '../utils/cn';
 import { computeLayout } from '../../features/tree/utils/treeLayout';
+import { ErrorBoundary } from './ErrorBoundary';
 
 interface ReactFlowTreeProps {
   persons: Person[];
@@ -26,8 +27,6 @@ interface ReactFlowTreeProps {
   onNodeClick?: (personId: string) => void;
   className?: string;
 }
-
-
 
 interface FamilyNodeData {
   label: string;
@@ -45,7 +44,7 @@ export const ReactFlowTree: React.FC<ReactFlowTreeProps> = ({
   onNodeClick,
   className,
 }) => {
-  // Safely generate nodes from persons with error handling
+// Safely generate nodes from persons with error handling
   const initialNodes: Node<FamilyNodeData>[] = useMemo(() => {
     // Handle empty persons array
     if (!persons || persons.length === 0) return [];
@@ -81,7 +80,7 @@ export const ReactFlowTree: React.FC<ReactFlowTreeProps> = ({
 
         const isTreeCenter = person?.id === treeCenterId;
         const isAlive = person?.lifeStatus !== 'deceased';
-        
+
         // Safely get position from posMap or use default
         const pt = posMap?.get(personId);
         const position = pt
@@ -180,58 +179,60 @@ export const ReactFlowTree: React.FC<ReactFlowTreeProps> = ({
   }, [nodes.length, fitView]);
 
   return (
-    <ReactFlowProvider>
-      <div
-      className={cn(
-        'w-full h-[600px] bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg border border-slate-200 shadow-sm overflow-hidden',
-        className
-      )}
-    >
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-         onNodesChange={onNodesChange}
-         onEdgesChange={onEdgesChange}
-        nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
-        onNodeClick={onNodeClickHandler}
-        fitView
-      >
-        {/* Background */}
-        <Background
-          color="#cbd5e1"
-          gap={16}
-          size={1}
-          style={{ backgroundColor: '#f8fafc' }}
-        />
+    <ErrorBoundary>
+      <ReactFlowProvider>
+        <div
+          className={cn(
+            'w-full h-[600px] bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg border border-slate-200 shadow-sm overflow-hidden',
+            className
+          )}
+        >
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
+            onNodeClick={onNodeClickHandler}
+            fitView
+          >
+            {/* Background */}
+            <Background
+              color="#cbd5e1"
+              gap={16}
+              size={1}
+              style={{ backgroundColor: '#f8fafc' }}
+            />
 
-        {/* Controls */}
-        <Controls
-          position="top-left"
-          showZoom
-          showFitView
-          showInteractive
-          style={{
-            background: 'white',
-            border: '1px solid #e2e8f0',
-            borderRadius: '8px',
-            boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
-          }}
-        />
+            {/* Controls */}
+            <Controls
+              position="top-left"
+              showZoom
+              showFitView
+              showInteractive
+              style={{
+                background: 'white',
+                border: '1px solid #e2e8f0',
+                borderRadius: '8px',
+                boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
+              }}
+            />
 
-        {/* Mini Map */}
-        <MiniMap
-          position="bottom-right"
-          style={{
-            background: 'white',
-            border: '1px solid #e2e8f0',
-            borderRadius: '8px',
-          }}
-          maskColor="rgba(37, 99, 235, 0.1)"
-        />
-      </ReactFlow>
-    </div>
-    </ReactFlowProvider>
+            {/* Mini Map */}
+            <MiniMap
+              position="bottom-right"
+              style={{
+                background: 'white',
+                border: '1px solid #e2e8f0',
+                borderRadius: '8px',
+              }}
+              maskColor="rgba(37, 99, 235, 0.1)"
+            />
+          </ReactFlow>
+        </div>
+      </ReactFlowProvider>
+    </ErrorBoundary>
   );
 };
 
