@@ -27,6 +27,9 @@ interface ReactFlowTreeProps {
   className?: string;
 }
 
+// Add error boundary for the tree component
+type TreeError = Error & { digest?: string };
+
 interface FamilyNodeData {
   label: string;
   person: Person;
@@ -43,64 +46,103 @@ export const ReactFlowTree: React.FC<ReactFlowTreeProps> = ({
   onNodeClick,
   className,
 }) => {
-  const nodeTypes = useMemo(() => ({ familyNode: FamilyNode }), []);
-  const edgeTypes = useMemo(() => ({ familyEdge: FamilyRelationship }), []);
-
-  // Generate nodes from persons
+  // Safely generate nodes from persons with error handling
   const initialNodes: Node<FamilyNodeData>[] = useMemo(() => {
-    const centerId =
-      treeCenterId && persons.some((p) => p.id === treeCenterId)
-        ? treeCenterId
-        : persons[0]?.id;
-    let posMap: Map<string, { x: number; y: number }> | null = null;
-    if (centerId && relationships.length > 0) {
-      try {
-        const res = computeLayout(centerId, 3, 'branch', relationships);
-        posMap = res.pos;
-      } catch {
-        posMap = null;
-      }
+    // Handle empty persons array
+    if (!persons || persons.length === 0) return [];
+
+    // Safely determine center ID
+    let centerId: string | undefined;
+    try {
+      centerId =
+        treeCenterId && persons.some((p) => p?.id === treeCenterId)
+          ? treeCenterId
+          : persons[0]?.id;
+    } catch {
+      centerId = undefined;
     }
 
-    return persons.map((person, index) => {
-      const isTreeCenter = person.id === treeCenterId;
-      const isAlive = person.lifeStatus !== 'deceased';
-      const pt = posMap?.get(person.id);
-      const position = pt
-        ? { x: pt.x - 95, y: pt.y - 75 }
-        : { x: (index % 5) * 280, y: Math.floor(index / 5) * 350 };
+    // Safely compute layout
+    let posMap: Map<string, { x: number; y: number }> | null = null;
+    try {
+      if (centerId && relationships?.length > 0) {
+        const res = computeLayout(centerId, 3, 'branch', relationships);
+        posMap = res.pos;
+      }
+    } catch {
+      posMap = null;
+    }
 
-      return {
-        id: person.id,
-        data: {
-          label: `${person.firstName} ${person.lastName || ''}`.trim(),
-          person,
-          photoUrl: photos[person.id],
-          isAlive,
-          isTreeCenter,
-        },
-        position,
-        type: 'familyNode',
-        draggable: true,
-      };
-    });
+    // Safely map persons to nodes
+    try {
+      return persons.map((person, index) => {
+        // Safely access person properties
+        const personId = person?.id;
+        if (!personId) return null;
+
+        const isTreeCenter = person?.id === treeCenterId;
+        const isAlive = person?.lifeStatus !== 'deceased';
+        
+        // Safely get position from posMap or use default
+        const pt = posMap?.get(personId);
+        const position = pt
+          ? { x: pt.x - 95, y: pt.y - 75 }
+          : { x: (index % 5) * 280, y: Math.floor(index / 5) * 350 };
+
+        // Safely construct data object
+        const label = `${person?.firstName || ''} ${person?.lastName || ''}`.trim();
+        const photoUrl = photos[personId];
+
+        return {
+          id: personId,
+          data: {
+            label,
+            person: person || { id: '', firstName: '', lastName: '', lifeStatus: 'alive', sex: 'unknown', birthDate: undefined, deathDate: undefined, birthplace: undefined },
+            photoUrl,
+            isAlive,
+            isTreeCenter,
+          },
+          position,
+          type: 'familyNode' as const,
+          draggable: true,
+        };
+      }).filter(Boolean) as Node<FamilyNodeData>[];
+    } catch {
+      return [];
+    }
   }, [persons, treeCenterId, photos, relationships]);
 
-  // Generate edges from relationships
-  const initialEdges: Edge[] = useMemo(
-    () =>
-      relationships.map((rel, index) => ({
-        id: `edge-${rel.id || index}`,
-        source: rel.person1Id || '',
-        target: rel.person2Id || '',
-        type: 'familyEdge',
-        data: {
-          relationType: rel.type,
-        },
-        animated: false,
-      })).filter(edge => edge.source && edge.target),
-    [relationships]
-  );
+  // Safely generate edges from relationships with error handling
+  const initialEdges: Edge[] = useMemo(() => {
+    // Handle empty or undefined relationships
+    if (!relationships || relationships.length === 0) return [];
+
+    try {
+      return relationships
+        .map((rel, index) => {
+          // Safely access relationship properties
+          const source = rel?.person1Id || '';
+          const target = rel?.person2Id || '';
+
+          // Filter out edges with invalid source/target
+          if (!source || !target) return null;
+
+          return {
+            id: `edge-${rel.id || index}`,
+            source,
+            target,
+            type: 'familyEdge' as const,
+            data: {
+              relationType: rel?.type,
+            },
+            animated: false,
+          };
+        })
+        .filter(Boolean) as Edge[];
+    } catch {
+      return [];
+    }
+  }, [relationships]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -114,6 +156,14 @@ export const ReactFlowTree: React.FC<ReactFlowTreeProps> = ({
   }, [initialEdges, setEdges]);
 
   const { fitView } = useReactFlow();
+
+  const nodeTypes = useMemo(() => ({
+    familyNode: FamilyNode,
+  }), []);
+
+  const edgeTypes = useMemo(() => ({
+    familyEdge: FamilyRelationship,
+  }), []);
 
   const onNodeClickHandler = useCallback(
     (_event: React.MouseEvent, node: Node<FamilyNodeData>) => {

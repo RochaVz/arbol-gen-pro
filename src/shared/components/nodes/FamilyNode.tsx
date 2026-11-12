@@ -23,8 +23,8 @@ export const FamilyNode: React.FC<NodeProps<FamilyNodeData>> = ({
 }) => {
   const { label, person, photoUrl, isAlive, isTreeCenter } = data;
 
-  // Determine gender icon color
-  const genderColor = person.sex === 'male' ? '#3b82f6' : '#ec4899';
+  // Determine gender icon color (handle undefined sex)
+  const genderColor = person?.sex === 'male' ? '#3b82f6' : '#ec4899';
 
   return (
     <div
@@ -54,7 +54,7 @@ export const FamilyNode: React.FC<NodeProps<FamilyNodeData>> = ({
         <div
           className="w-3 h-3 rounded-full flex-shrink-0 ml-2"
           style={{ backgroundColor: genderColor }}
-          title={person.sex === 'male' ? 'Masculino' : 'Femenino'}
+          title={person?.sex === .male. ? 'Masculino' : 'Femenino'}
         />
       </div>
 
