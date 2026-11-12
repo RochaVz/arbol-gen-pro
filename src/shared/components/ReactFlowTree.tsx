@@ -27,8 +27,7 @@ interface ReactFlowTreeProps {
   className?: string;
 }
 
-// Add error boundary for the tree component
-type TreeError = Error & { digest?: string };
+
 
 interface FamilyNodeData {
   label: string;

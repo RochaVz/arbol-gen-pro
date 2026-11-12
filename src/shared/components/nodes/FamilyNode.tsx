@@ -54,7 +54,8 @@ export const FamilyNode: React.FC<NodeProps<FamilyNodeData>> = ({
         <div
           className="w-3 h-3 rounded-full flex-shrink-0 ml-2"
           style={{ backgroundColor: genderColor }}
-          title={person?.sex === .male. ? 'Masculino' : 'Femenino'}
+          title={person?.sex === 'male' ? 'Masculino' : 'Femenino'}
+
         />
       </div>
 
