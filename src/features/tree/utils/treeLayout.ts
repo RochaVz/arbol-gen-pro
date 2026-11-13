@@ -96,7 +96,7 @@ function childrenOfFamily(members: string[], rels: Relationship[]): string[] {
   return Array.from(set);
 }
 
-export function layoutDescendants(rootId: string, depth: number, rels: Relationship[], pos: Layout, startX = 0, y = 0): number {
+export function layoutDescendants(rootId: string, depth: number, rels: Relationship[], pos: Layout, startX = 0, y = 0, nodeW = NODE_W, nodeH = NODE_H): number {
   const members = familyMembers(rootId, rels);
   const kids = depth > 0 ? childrenOfFamily(members, rels) : [];
   if (kids.length === 0) {
