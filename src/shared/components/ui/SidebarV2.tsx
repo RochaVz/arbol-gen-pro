@@ -34,6 +34,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const handleItemClick = (item: SidebarItem) => {
     onItemClick?.(item.id);
     item.onClick?.();
+    setMobileOpen(false);
   };
 
   const sidebarContent = (
@@ -99,7 +100,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Mobile toggle */}
       <div className="lg:hidden fixed top-4 left-4 z-50">
         <button
-          onClick={() => setMobileOpen(!mobileOpen)}
+          type="button"
+          onClick={() => setMobileOpen((open) => !open)}
+          aria-label={mobileOpen ? 'Cerrar menú' : 'Abrir menú'}
+          aria-expanded={mobileOpen}
+          aria-controls="mobile-sidebar"
           className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
         >
           {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -109,10 +114,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Mobile Sidebar */}
       {mobileOpen && (
         <motion.div
+          id="mobile-sidebar"
           initial={{ x: -280 }}
           animate={{ x: 0 }}
           exit={{ x: -280 }}
-          className="lg:hidden fixed left-0 top-0 h-screen w-64 bg-white shadow-lg z-40 mt-16"
+          className="lg:hidden fixed left-0 top-16 bottom-0 w-64 bg-white shadow-lg z-40"
         >
           {sidebarContent}
         </motion.div>
@@ -120,8 +126,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Mobile overlay */}
       {mobileOpen && (
-        <div
-          className="lg:hidden fixed inset-0 bg-black/50 z-30 mt-16"
+        <button
+          type="button"
+          aria-label="Cerrar menú lateral"
+          className="lg:hidden fixed inset-0 bg-black/50 z-30"
           onClick={() => setMobileOpen(false)}
         />
       )}

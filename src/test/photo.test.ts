@@ -61,6 +61,15 @@ describe('Fase 9 - fotografias', () => {
     await expect(savePhotoLocally({ file, treeId: '' })).rejects.toThrow('missing_tree');
   });
 
+  it('revierte los metadatos y la operación si falla el guardado de blobs', async () => {
+    const bulkPut = vi.spyOn(db.photoBlobs, 'bulkPut').mockRejectedValueOnce(new Error('storage error'));
+    const file = new File([new Uint8Array(10)], 'a.jpg', { type: 'image/jpeg' });
+    await expect(savePhotoLocally({ file, treeId: 't1' })).rejects.toThrow('storage error');
+    expect(await db.photos.count()).toBe(0);
+    expect(await db.syncOperations.count()).toBe(0);
+    bulkPut.mockRestore();
+  });
+
   it('cleanupLocalBinaries no borra si no esta registrado', async () => {
     const treeId = 't2';
     await db.trees.add({ id: treeId, name: 'Arbol', ownerId: 'u', createdAt: Date.now(), updatedAt: Date.now(), serverVersion: 0, localRevision: 1, syncStatus: 'pending', deletedAt: null } as any);

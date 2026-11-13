@@ -29,6 +29,17 @@ export async function enqueueOperation(operation: SyncOperation): Promise<void> 
   await db.syncOperations.add(operation);
 }
 
+export async function unconfirmedCreateOperations(
+  entities: Array<{ entityType: SyncOperation['entityType']; entityId: string }>
+): Promise<string[]> {
+  const operations = await Promise.all(entities.map(({ entityType, entityId }) =>
+    db.syncOperations.where('[entityType+entityId]').equals([entityType, entityId]).toArray()
+  ));
+  return operations.flat()
+    .filter((op) => op.operationType === 'create' && op.status !== 'confirmed')
+    .map((op) => op.operationId);
+}
+
 export async function writeLocal(
   entityTable: any,
   entity: any,

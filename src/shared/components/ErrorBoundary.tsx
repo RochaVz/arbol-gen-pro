@@ -34,15 +34,40 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
+    // Log comprehensive error information
+    const errorData = {
+      timestamp: new Date().toISOString(),
+      errorMessage: error.message,
+      errorStack: error.stack,
+      componentStack: errorInfo.componentStack,
+      errorString: String(error),
+    };
+
+    // Log to console
+    console.error('[ErrorBoundary] Caught error:', errorData);
+
+    // Log to window object for debugging
+    if (typeof window !== 'undefined') {
+      (window as any).__LAST_ERROR__ = errorData;
+    }
+
+    // Update state
     this.setState({
       error,
       errorInfo,
     });
 
-    // Log the error to an error reporting service (e.g., Sentry, Supabase)
-    console.error('[ErrorBoundary]', error, errorInfo);
+    // Call optional error callback (e.g., for error reporting service)
     this.props.onError?.(error, errorInfo);
   }
+
+  handleReset = () => {
+    this.setState({
+      hasError: false,
+      error: null,
+      errorInfo: null,
+    });
+  };
 
   render(): ReactNode {
     if (this.state.hasError) {
@@ -57,18 +82,26 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             </div>
             <p className="text-sm text-slate-600 mb-4">
               Ha ocurrido un error inesperado al renderizar la visualización del árbol genealógico.
-              Por favor, recarga la página paraintentar de nuevo.
+              Por favor, recarga la página para intentar de nuevo.
             </p>
+            {typeof import.meta !== 'undefined' && import.meta.env.DEV && this.state.error && (
+              <details className="mt-4 p-3 bg-slate-100 rounded text-left text-xs text-slate-700 max-h-48 overflow-auto">
+                <summary className="font-semibold cursor-pointer mb-2">
+                  Detalles del error (desarrollo)
+                </summary>
+                <pre className="whitespace-pre-wrap break-words">
+                  {this.state.error.message}
+                  {'\n\n'}
+                  {this.state.errorInfo?.componentStack}
+                </pre>
+              </details>
+            )}
             <button
               onClick={() => {
-                this.setState({
-                  hasError: false,
-                  error: null,
-                  errorInfo: null,
-                });
+                this.handleReset();
                 window.location.reload();
               }}
-              className="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors"
+              className="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors mt-4"
             >
               Recargar página
             </button>

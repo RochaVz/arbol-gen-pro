@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button } from '../../shared/components/ui/Button';
 import { Card } from '../../shared/components/ui/Card';
+import type { Person } from '../../core/db';
 
 export interface PersonProfilePageProps {
   personId?: string;
@@ -9,13 +10,13 @@ export interface PersonProfilePageProps {
   lastName?: string;
   birthDate?: string;
   deathDate?: string;
-  lifeStatus?: 'living' | 'deceased';
-  parents?: any[];
-  children?: any[];
-  partners?: any[];
-  events?: any[];
-  gallery?: any[];
-  documents?: any[];
+  lifeStatus?: 'living' | 'deceased' | 'unknown';
+  parents?: Person[];
+  familyChildren?: Person[];
+  partners?: Person[];
+  events?: Array<{ id: string; title: string; date: string }>;
+  gallery?: Array<{ id: string; url: string }>;
+  documents?: Array<{ id: string; name?: string; type?: string }>;
   onSelectPerson?: (id: string) => void;
   onBack?: () => void;
   onEdit?: () => void;
@@ -35,7 +36,7 @@ export const PersonProfilePage: React.FC<PersonProfilePageProps> = ({
   deathDate,
   lifeStatus = 'living',
   parents = [],
-  children = [],
+  familyChildren = [],
   partners = [],
   events = [],
   gallery = [],
@@ -61,7 +62,7 @@ export const PersonProfilePage: React.FC<PersonProfilePageProps> = ({
           >
             ← Volver
           </button>
-          <Button variant="secondary" size="md" onClick={onEdit}>
+          <Button variant="secondary" size="md" onClick={onEdit} disabled={!onEdit}>
             ✏️ Editar perfil
           </Button>
         </div>
@@ -156,7 +157,7 @@ export const PersonProfilePage: React.FC<PersonProfilePageProps> = ({
                       </div>
                       <div>
                         <p className="font-semibold text-neutral-900">{parent.firstName} {parent.lastName}</p>
-                        <p className="text-sm text-neutral-600">{parent.relationshipType || 'Pariente'}</p>
+                        <p className="text-sm text-neutral-600">Pariente</p>
                       </div>
                     </div>
                   ))}
@@ -186,7 +187,7 @@ export const PersonProfilePage: React.FC<PersonProfilePageProps> = ({
                       </div>
                       <div>
                         <p className="font-semibold text-neutral-900">{partner.firstName} {partner.lastName}</p>
-                        <p className="text-sm text-neutral-600">{partner.relationshipType || 'Pareja'}</p>
+                        <p className="text-sm text-neutral-600">Pareja</p>
                       </div>
                     </div>
                   ))}
@@ -201,11 +202,11 @@ export const PersonProfilePage: React.FC<PersonProfilePageProps> = ({
               <h2 className="text-2xl font-bold text-neutral-900">👶 Hijos</h2>
             </div>
             <div className="p-6">
-              {children.length === 0 ? (
+              {familyChildren.length === 0 ? (
                 <p className="text-neutral-600 text-center py-8">Sin hijos registrados</p>
               ) : (
                 <div className="space-y-4">
-                  {children.map((child) => (
+                  {familyChildren.map((child) => (
                     <div
                       key={child.id}
                       onClick={() => onSelectPerson?.(child.id)}
@@ -216,7 +217,7 @@ export const PersonProfilePage: React.FC<PersonProfilePageProps> = ({
                       </div>
                       <div>
                         <p className="font-semibold text-neutral-900">{child.firstName} {child.lastName}</p>
-                        <p className="text-sm text-neutral-600">{child.relationshipType || 'Hijo/a'}</p>
+                        <p className="text-sm text-neutral-600">Hijo/a</p>
                       </div>
                     </div>
                   ))}
@@ -235,8 +236,8 @@ export const PersonProfilePage: React.FC<PersonProfilePageProps> = ({
                 <p className="text-neutral-600 text-center py-8">Sin eventos registrados</p>
               ) : (
                 <div className="space-y-3">
-                  {events.map((event, idx) => (
-                    <div key={idx} className="p-3 rounded-lg bg-neutral-50 border border-neutral-200">
+                  {events.map((event) => (
+                    <div key={event.id} className="p-3 rounded-lg bg-neutral-50 border border-neutral-200">
                       <p className="font-semibold text-neutral-900">{event.title}</p>
                       <p className="text-sm text-neutral-600">{event.date}</p>
                     </div>
@@ -287,7 +288,7 @@ export const PersonProfilePage: React.FC<PersonProfilePageProps> = ({
               {documents.length === 0 ? (
                 <div className="text-center py-8">
                   <p className="text-neutral-600 mb-4">No hay documentos aún</p>
-                  <Button size="sm" variant="secondary" onClick={onAddDocument}>
+                  <Button size="sm" variant="secondary" onClick={onAddDocument} disabled={!onAddDocument}>
                     📄 Agregar documentos
                   </Button>
                 </div>

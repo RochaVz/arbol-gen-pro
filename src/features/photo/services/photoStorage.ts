@@ -1,5 +1,5 @@
 export { MAX_PHOTO_SIZE_BYTES } from './photoCompression';
-import { db, photoRepository } from '../../../core/db';
+import { db, photoRepository, unconfirmedCreateOperations } from '../../../core/db';
 import type { Photo, PhotoBlob } from '../../../core/db/schema';
 import { uuidv7 } from '../../../shared/utils/uuid';
 import { getAccessToken } from '../../../core/supabase';
@@ -57,8 +57,6 @@ export async function savePhotoLocally(params: SavePhotoParams): Promise<SavePho
     deletedAt: null,
   } as Photo;
 
-  const { entity, operation } = await photoRepository.create(photo);
-
   const now = Date.now();
   const blobs: PhotoBlob[] = [
     { id: uuidv7(), photoId: id, kind: 'original', blob: versions.original, size: versions.original.size, createdAt: now, updatedAt: now, serverVersion: 0, localRevision: 1, syncStatus: 'pending', deletedAt: null } as PhotoBlob,
@@ -66,8 +64,17 @@ export async function savePhotoLocally(params: SavePhotoParams): Promise<SavePho
     { id: uuidv7(), photoId: id, kind: 'thumbnail', blob: versions.thumbnail, size: versions.thumbnail.size, createdAt: now, updatedAt: now, serverVersion: 0, localRevision: 1, syncStatus: 'pending', deletedAt: null } as PhotoBlob,
   ];
 
-  await db.transaction('rw', db.photoBlobs, async () => {
+  const { entity, operation } = await db.transaction('rw', [db.photos, db.photoBlobs, db.syncOperations], async () => {
+    const dependencies: Array<{ entityType: 'tree' | 'person' | 'event'; entityId: string }> = [
+      { entityType: 'tree', entityId: treeId },
+    ];
+    if (params.personId) dependencies.push({ entityType: 'person', entityId: params.personId });
+    if (params.eventId) dependencies.push({ entityType: 'event', entityId: params.eventId });
+    const dependsOn = await unconfirmedCreateOperations(dependencies);
+    const saved = await photoRepository.create(photo);
+    await db.syncOperations.update(saved.operation.operationId, { dependsOn });
     await db.photoBlobs.bulkPut(blobs);
+    return { ...saved, operation: { ...saved.operation, dependsOn } };
   });
 
   return { photo: entity, blobs, operation, versions };

@@ -7,7 +7,7 @@ import {
   photoRepository,
   uuidv7,
 } from './core/db';
-import type { Person, Event, Tree, Photo } from './core/db';
+import type { Person, Relationship, Event, Tree, Photo } from './core/db';
 import { useSyncStatus } from './shared/hooks/useSyncStatus';
 import { supabase } from './core/supabase';
 import { getPhotoBlobs } from './features/photo/services/photoStorage';
@@ -16,7 +16,7 @@ import { startRealtimeSync, stopRealtimeSync } from './core/sync/realtime';
 import { PremiumLayout } from './shared/components/PremiumLayout';
 import { PremiumHome } from './shared/components/PremiumHome';
 import { ReactFlowTree } from './shared/components/ReactFlowTree';
-import { PersonProfilePage } from './features/person/PersonProfilePage';
+import { PersonProfileContainer } from './features/person/PersonProfileContainer';
 import { ButtonV2 as Button, InputV2 as Input, Toast } from './shared/components/ui';
 import { Modal } from './shared/components/ui/Modal';
 import { Plus, Mail, Lock } from 'lucide-react';
@@ -60,7 +60,7 @@ export default function App() {
   // State management
   const [trees, setTrees] = useState<Tree[]>([]);
   const [persons, setPersons] = useState<Person[]>([]);
-  const [relationships, setRelationships] = useState<any[]>([]);
+  const [relationships, setRelationships] = useState<Relationship[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [treeId, setTreeId] = useState('');
@@ -142,7 +142,8 @@ export default function App() {
       const urls: Record<string, string> = {};
       await Promise.all(
         personsList.map(async (p) => {
-          const photo = photoList.find((ph) => ph.personId === p.id && !ph.deletedAt);
+          const photo = photoList.filter((ph) => ph.personId === p.id && !ph.deletedAt)
+            .sort((a, b) => b.createdAt - a.createdAt)[0];
           if (!photo) return;
           try {
             const blobs = await getPhotoBlobs(photo.id);
@@ -180,12 +181,12 @@ export default function App() {
   }, [treeId, persons, treeCenterId]);
 
   // Filter data by tree
-  const inTree = (arr: { treeId?: string }[]) =>
+  const inTree = <T extends { treeId?: string },>(arr: T[]) =>
     treeId ? arr.filter((x) => x.treeId === treeId) : arr;
 
-  const personsT = inTree(persons) as Person[];
-  const relationshipsT = inTree(relationships) as any[];
-  const eventsT = inTree(events) as Event[];
+  const personsT = inTree(persons);
+  const relationshipsT = inTree(relationships);
+  const eventsT = inTree(events);
 
   // Auth handlers
   const handleSignIn = async () => {
@@ -315,20 +316,32 @@ export default function App() {
               <p className="text-slate-600">Visualizaci├│n interactiva de tu ├írbol geneal├│gico con {personsT.length} miembros</p>
             </div>
             <ReactFlowTree
-              persons={personsT}
-              relationships={relationshipsT}
-              photos={personPhotoUrls}
-              treeCenterId={treeCenterId}
+              persons={Array.isArray(personsT) ? personsT : []}
+              relationships={Array.isArray(relationshipsT) ? relationshipsT : []}
+              photos={typeof personPhotoUrls === 'object' && personPhotoUrls !== null ? personPhotoUrls : {}}
+              treeCenterId={typeof treeCenterId === 'string' && treeCenterId.length > 0 ? treeCenterId : undefined}
               onNodeClick={(personId) => {
-                setSelectedPersonId(personId);
-                setView('person');
+                if (typeof personId === 'string') {
+                  setSelectedPersonId(personId);
+                  setView('person');
+                }
               }}
             />
           </div>
         );
       case 'person':
         return selectedPersonId ? (
-          <PersonProfilePage personId={selectedPersonId} />
+          <PersonProfileContainer
+            key={selectedPersonId}
+            personId={selectedPersonId}
+            persons={personsT}
+            relationships={relationshipsT}
+            events={eventsT}
+            photos={photos}
+            onSelectPerson={setSelectedPersonId}
+            onBack={() => setView('tree')}
+            onRefresh={load}
+          />
         ) : null;
       default:
         return (
