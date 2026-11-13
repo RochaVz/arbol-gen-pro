@@ -11,12 +11,16 @@ export interface DrawerProps extends HTMLAttributes<HTMLDivElement> {
   onClose: () => void;
   position?: 'left' | 'right';
   title?: string;
-  closeLabel?: string;
+  closeLabel?: string; // Este parámetro causaba warning de no-unused-vars cuando no se usaba
 }
 
 export const Drawer = React.forwardRef<HTMLDivElement, DrawerProps>(
-  ({ isOpen, onClose, position = 'right', title, closeLabel = 'Cerrar', className = '', children, ...props }, ref) => {
+  ({ isOpen, onClose, position = 'right', title, closeLabel, className = '', children, ...props }, ref) => {
     if (!isOpen) return null;
+
+    function onClickOutside(e: React.MouseEvent<HTMLDivElement>) {
+      if ((e.target as HTMLElement).className.includes('z-[900]')) onClose();
+    }
 
     return (
       <>
@@ -29,15 +33,13 @@ export const Drawer = React.forwardRef<HTMLDivElement, DrawerProps>(
         {/* Panel */}
         <div
           ref={ref}
-          className={`
-            fixed inset-0 z-[1000] bg-surface border-l border-border shadow-xl
+          className={`fixed inset-0 z-[1000] bg-surface border-l border-border shadow-xl
             ${position === 'right' ? 'right-0' : 'left-0'}
             w-full sm:w-[420px] h-full flex flex-col
             transform transition-transform duration-300 ease-in-out
             ${position === 'right' ? 'translate-x-full' : '-translate-x-full'}
             data-[state=open]:translate-x-0
-            ${className}
-          `.trim()}
+            ${className}`}
           {...props}
         >
           <div className="flex items-center justify-between p-4 sm:p-6 border-b border-border bg-surface-elevated">
@@ -54,11 +56,7 @@ export const Drawer = React.forwardRef<HTMLDivElement, DrawerProps>(
         </div>
       </>
     );
-
-    function onClickOutside(e: React.MouseEvent<HTMLDivElement>) {
-      if ((e.target as HTMLElement).className.includes('z-\[900\]')) onClose();
-    }
-  },
+  }
 );
 
 Drawer.displayName = 'Drawer';
