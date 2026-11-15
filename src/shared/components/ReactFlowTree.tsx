@@ -26,6 +26,7 @@ interface ReactFlowTreeProps {
   treeCenterId?: string;
   onNodeClick?: (personId: string) => void;
   className?: string;
+  onSearchTermChange?: (term: string) => void;
 }
 
 interface FamilyNodeData {
@@ -307,7 +308,7 @@ const ReactFlowTreeContent: React.FC<ReactFlowTreeProps> = ({
       });
       return [];
     }
-  }, [relationships]);
+  }, [persons, relationships]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -345,6 +346,24 @@ const ReactFlowTreeContent: React.FC<ReactFlowTreeProps> = ({
       return () => clearTimeout(timeout);
     }
   }, [nodes.length, fitView]);
+
+  // Persist zoom/pan state to localStorage
+  React.useEffect(() => {
+    const savedState = localStorage.getItem('react-flow-view-state');
+    if (savedState) {
+      // Restore previous view state
+      // @ts-ignore - React Flow internal state format
+      fitView?.(JSON.parse(savedState));
+    }
+  }, [nodes.length]);
+
+  // Save zoom/pan state on unload
+  React.useEffect(() => {
+    return () => {
+      // @ts-ignore - React Flow internal state format
+      localStorage.setItem('react-flow-view-state', JSON.stringify(fitView?.()));
+    };
+  }, []);
 
   // Render fallback UI if no valid data
   if (!isValidTreeData(persons, relationships)) {

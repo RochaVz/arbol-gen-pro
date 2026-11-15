@@ -13,13 +13,14 @@ import { supabase } from './core/supabase';
 import { getPhotoBlobs } from './features/photo/services/photoStorage';
 import { startRealtimeSync, stopRealtimeSync } from './core/sync/realtime';
 
+import { EmptyState } from './shared/components/EmptyState';
 import { PremiumLayout } from './shared/components/PremiumLayout';
 import { PremiumHome } from './shared/components/PremiumHome';
 import { ReactFlowTree } from './shared/components/ReactFlowTree';
 import { PersonProfileContainer } from './features/person/PersonProfileContainer';
 import { ButtonV2 as Button, InputV2 as Input, Toast } from './shared/components/ui';
 import { Modal } from './shared/components/ui/Modal';
-import { Plus, Mail, Lock } from 'lucide-react';
+import { Plus, Mail, Lock, TreePine } from 'lucide-react';
 
 type View = 'home' | 'tree' | 'person' | 'family' | 'photos' | 'settings' | 'help';
 type ColorMode = 'light' | 'dark';
@@ -346,7 +347,14 @@ export default function App() {
       default:
         return (
           <div className="text-center py-12">
-            <p className="text-slate-600">Secci├│n en desarrollo</p>
+            <EmptyState
+  icon={<TreePine className="w-20 h-20 text-primary-600 mb-6" />}
+  title="Sin datos para mostrar"
+  description="No hay miembros de la familia o relaciones para visualizar el árbol genealógico."
+  action={<button className="mt-4 rounded-lg bg-primary-600 px-4 py-2 text-white font-medium hover:bg-primary-500 transition-colors">
+    Crear árbol familiar
+  </button>}
+/>
           </div>
         );
     }
