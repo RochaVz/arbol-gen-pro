@@ -4,10 +4,9 @@ import {
   Position,
   type NodeProps,
 } from 'reactflow';
-import { User, MapPin, Calendar } from 'lucide-react';
+import { User } from 'lucide-react';
 import type { Person } from '../../../core/db';
 import { cn } from '../../utils/cn';
-import { partialDateToString } from '../../utils/date';
 
 interface FamilyNodeData {
   label: string;
@@ -23,95 +22,98 @@ export const FamilyNode: React.FC<NodeProps<FamilyNodeData>> = ({
 }) => {
   const { label, person, photoUrl, isAlive, isTreeCenter } = data;
 
-  // Determine gender icon color (handle undefined sex)
-  const genderColor = person?.sex === 'male' ? '#3b82f6' : '#ec4899';
+  // Determine gender border color (subtle left border)
+  const genderBorderColor = person?.sex === 'male' ? 'border-l-blue-500' : 'border-l-pink-500';
+
+  // Format dates: show year only or compact date
+  const birthYear = person.birthDate
+    ? new Date(
+        typeof person.birthDate === 'string'
+          ? person.birthDate
+          : (person.birthDate as any).year || 0,
+        0,
+        1
+      ).getFullYear()
+    : null;
+
+  const deathYear = person.deathDate
+    ? new Date(
+        typeof person.deathDate === 'string'
+          ? person.deathDate
+          : (person.deathDate as any).year || 0,
+        0,
+        1
+      ).getFullYear()
+    : null;
+
+  const dateRange = birthYear && deathYear ? `${birthYear}–${deathYear}` : birthYear ? `b. ${birthYear}` : '';
 
   return (
     <div
       className={cn(
-        'bg-white rounded-2xl shadow-lg border-2 p-3 w-64 cursor-pointer transition-all duration-200',
-        selected ? 'border-primary-600 shadow-xl' : 'border-slate-200',
-        isTreeCenter && 'ring-4 ring-accent-300 ring-offset-2',
-        !isAlive && 'opacity-75'
+        'bg-white dark:bg-slate-800 rounded-xl shadow-md border-2 border-l-4 overflow-hidden',
+        'w-56 cursor-pointer transition-all duration-200',
+        selected ? 'border-primary-500 shadow-lg scale-105' : 'border-slate-200 dark:border-slate-700',
+        genderBorderColor,
+        isTreeCenter && 'ring-2 ring-accent-400 ring-offset-2 dark:ring-offset-slate-900',
+        !isAlive && 'opacity-70 grayscale'
       )}
     >
       {/* Connection Handles */}
       <Handle type="target" position={Position.Top} />
       <Handle type="source" position={Position.Bottom} />
 
-      {/* Header with Gender Indicator */}
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex-1">
-          {isTreeCenter && (
-            <div className="inline-block bg-accent-100 text-accent-700 text-xs font-bold px-2 py-1 rounded-full mb-1">
-              Centro del Árbol
-            </div>
-          )}
-          <h3 className="font-bold text-sm text-slate-900 truncate">{label}</h3>
-        </div>
-
-        {/* Gender Indicator */}
-        <div
-          className="w-3 h-3 rounded-full flex-shrink-0 ml-2"
-          style={{ backgroundColor: genderColor }}
-          title={person?.sex === 'male' ? 'Masculino' : 'Femenino'}
-
-        />
-      </div>
-
-      {/* Photo */}
-      {photoUrl ? (
-        <div className="mb-3 overflow-hidden">
+      {/* Avatar section */}
+      <div className="relative">
+        {photoUrl ? (
           <img
             src={photoUrl}
             alt={label}
-            className="w-full h-40 object-cover rounded-lg"
+            className="w-full h-24 object-cover"
           />
-        </div>
-      ) : (
-        <div className="mb-3 w-full h-40 bg-gradient-to-br from-slate-100 to-slate-200 rounded-lg flex items-center justify-center">
-          <User className="w-12 h-12 text-slate-400" />
-        </div>
-      )}
-
-      {/* Dates */}
-      <div className="space-y-1 text-xs text-slate-600">
-        {person.birthDate && (
-          <div className="flex items-center gap-1">
-            <Calendar className="w-3 h-3 flex-shrink-0" />
-            <span>
-              Nac.:{' '}
-              {partialDateToString(person.birthDate as any)}
-            </span>
+        ) : (
+          <div className="w-full h-24 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 flex items-center justify-center">
+            <User className="w-10 h-10 text-slate-400 dark:text-slate-500" />
           </div>
         )}
 
-        {person.deathDate && (
-          <div className="flex items-center gap-1 text-red-600">
-            <Calendar className="w-3 h-3 flex-shrink-0" />
-            <span>
-              Fall.:{' '}
-              {partialDateToString(person.deathDate as any)}
-            </span>
+        {/* Tree center badge - overlaid on image */}
+        {isTreeCenter && (
+          <div className="absolute top-1 right-1 bg-accent-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full shadow-sm">
+            ★
           </div>
         )}
 
-        {person.birthplace && (
-          <div className="flex items-center gap-1">
-            <MapPin className="w-3 h-3 flex-shrink-0" />
-            <span className="truncate">{person.birthplace.name}</span>
-          </div>
-        )}
+        {/* Status indicator - bottom right */}
+        <div
+          className={cn(
+            'absolute bottom-1 right-1 w-3 h-3 rounded-full border border-white shadow-sm',
+            isAlive ? 'bg-green-500' : 'bg-slate-500'
+          )}
+        />
       </div>
 
-      {/* Status Badge */}
-      <div className="mt-3 pt-3 border-t border-slate-100">
+      {/* Content section */}
+      <div className="p-2.5">
+        {/* Name - prominent */}
+        <h3 className="font-bold text-sm text-slate-900 dark:text-white truncate leading-tight mb-1">
+          {label}
+        </h3>
+
+        {/* Compact date range */}
+        {dateRange && (
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mb-2 truncate">
+            {dateRange}
+          </p>
+        )}
+
+        {/* Status badge */}
         <span
           className={cn(
-            'inline-block text-xs font-semibold px-2 py-1 rounded-full',
+            'inline-block text-xs font-semibold px-1.5 py-0.5 rounded',
             isAlive
-              ? 'bg-green-100 text-green-700'
-              : 'bg-slate-100 text-slate-700'
+              ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+              : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
           )}
         >
           {isAlive ? 'Vivo' : 'Fallecido'}

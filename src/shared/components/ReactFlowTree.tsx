@@ -370,15 +370,15 @@ const ReactFlowTreeContent: React.FC<ReactFlowTreeProps> = ({
     return (
       <div
         className={cn(
-          'w-full h-[600px] bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg border border-slate-200 shadow-sm overflow-hidden flex items-center justify-center',
+          'w-full h-[calc(100vh-theme(spacing.32))] bg-gradient-to-br from-slate-50 dark:from-slate-900 to-slate-100 dark:to-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden flex items-center justify-center',
           className
         )}
       >
         <div className="text-center p-6 max-w-md">
-          <div className="text-lg font-semibold text-slate-800 mb-2">
+          <div className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-2">
             No hay datos para mostrar
           </div>
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-slate-600 dark:text-slate-400">
             No hay miembros de la familia o relaciones para visualizar el árbol genealógico.
           </p>
         </div>
@@ -389,7 +389,7 @@ const ReactFlowTreeContent: React.FC<ReactFlowTreeProps> = ({
   return (
     <div
       className={cn(
-        'w-full h-[600px] bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg border border-slate-200 shadow-sm overflow-hidden',
+        'w-full h-[calc(100vh-theme(spacing.32))] bg-gradient-to-br from-slate-50 dark:from-slate-900 to-slate-100 dark:to-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden',
         className
       )}
     >
@@ -407,7 +407,7 @@ const ReactFlowTreeContent: React.FC<ReactFlowTreeProps> = ({
           color="#cbd5e1"
           gap={16}
           size={1}
-          style={{ backgroundColor: '#f8fafc' }}
+          style={{ backgroundColor: 'var(--bg-color)' }}
         />
         <Controls
           position="top-left"
@@ -421,15 +421,18 @@ const ReactFlowTreeContent: React.FC<ReactFlowTreeProps> = ({
             boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.1)',
           }}
         />
-        <MiniMap
-          position="bottom-right"
-          style={{
-            background: 'white',
-            border: '1px solid #e2e8f0',
-            borderRadius: '8px',
-          }}
-          maskColor="rgba(37, 99, 235, 0.1)"
-        />
+        {/* Only show MiniMap on desktop (lg screens) */}
+        <div className="hidden lg:block">
+          <MiniMap
+            position="bottom-right"
+            style={{
+              background: 'white',
+              border: '1px solid #e2e8f0',
+              borderRadius: '8px',
+            }}
+            maskColor="rgba(37, 99, 235, 0.1)"
+          />
+        </div>
       </ReactFlow>
     </div>
   );
