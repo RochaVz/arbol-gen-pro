@@ -1,92 +1,134 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Sidebar, Header, PageContainer } from './ui';
 import type { SidebarItem } from './ui/SidebarV2';
-import {
-  Home,
-  Users,
-  TreePine,
-  ImageIcon,
-  Settings,
-  HelpCircle,
-  LogOut,
-} from 'lucide-react';
+import { SidebarProvider, useSidebarState } from './ui/SidebarContext';
+import { Home, Users, TreePine, ImageIcon, Settings, LogOut, Sun, Moon, Mail, Lock, Plus, HelpCircle } from 'lucide-react';
+import { Button, Input, Modal } from './ui';
+import { TreeSelector } from './TreeSelector';
+import { supabase } from '../../core/supabase';
+import { treeRepository, personRepository, uuidv7 } from '../../core/db';
+import { useToast } from '../hooks/useToast';
+import { useAppStore } from '../../store';
 
 interface PremiumLayoutProps {
   children: React.ReactNode;
-  title?: string;
-  subtitle?: string;
-  breadcrumb?: Array<{ label: string; onClick?: () => void }>;
-  headerActions?: React.ReactNode;
-  onNavigate?: (view: string) => void;
-  currentView?: string;
   onLogout?: () => void;
   userEmail?: string | null;
 }
 
-export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
-  children,
-  title,
-  subtitle,
-  breadcrumb,
-  headerActions,
-  onNavigate,
-  currentView = 'home',
-  onLogout,
-  userEmail,
-}) => {
+export const PremiumLayout: React.FC<PremiumLayoutProps> = (props) => (
+  <SidebarProvider>
+    <PremiumLayoutInner {...props} />
+  </SidebarProvider>
+);
+
+const PremiumLayoutInner: React.FC<PremiumLayoutProps> = ({ children, onLogout, userEmail }) => {
+  const { collapsed } = useSidebarState();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { addToast } = useToast();
+  const { trees, load, activeTreeId, setActiveTreeId } = useAppStore();
+
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authLoading, setAuthLoading] = useState(false);
+  const [wizardTreeName, setWizardTreeName] = useState('Mi familia');
+  const [wizardMyName, setWizardMyName] = useState('');
+  const [wizardLastName, setWizardLastName] = useState('');
+  const [darkMode, setDarkMode] = useState(() => {
+    const stored = localStorage.getItem('color-mode');
+    return stored ? stored === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+  });
+
+  const toggleDark = () => {
+    const next = !darkMode;
+    setDarkMode(next);
+    document.documentElement.classList.toggle('dark', next);
+    localStorage.setItem('color-mode', next ? 'dark' : 'light');
+  };
+
+  const currentPath = location.pathname;
+
   const sidebarItems: SidebarItem[] = [
-    {
-      id: 'home',
-      label: 'Inicio',
-      icon: <Home className="w-5 h-5" />,
-      active: currentView === 'home',
-      onClick: () => onNavigate?.('home'),
-    },
-    {
-      id: 'family',
-      label: 'Mi Familia',
-      icon: <Users className="w-5 h-5" />,
-      active: currentView === 'family',
-      onClick: () => onNavigate?.('family'),
-    },
-    {
-      id: 'tree',
-      label: 'Árbol Genealógico',
-      icon: <TreePine className="w-5 h-5" />,
-      active: currentView === 'tree',
-      onClick: () => onNavigate?.('tree'),
-    },
-    {
-      id: 'photos',
-      label: 'Fotografías',
-      icon: <ImageIcon className="w-5 h-5" />,
-      active: currentView === 'photos',
-      onClick: () => onNavigate?.('photos'),
-    },
-    {
-      id: 'settings',
-      label: 'Configuración',
-      icon: <Settings className="w-5 h-5" />,
-      active: currentView === 'settings',
-      onClick: () => onNavigate?.('settings'),
-    },
-    {
-      id: 'help',
-      label: 'Ayuda',
-      icon: <HelpCircle className="w-5 h-5" />,
-      active: currentView === 'help',
-      onClick: () => onNavigate?.('help'),
-    },
+    { id: '/', label: 'Inicio', icon: <Home className="w-5 h-5" />, active: currentPath === '/', onClick: () => navigate('/') },
+    { id: '/tree', label: 'Árbol Genealógico', icon: <TreePine className="w-5 h-5" />, active: currentPath === '/tree' || currentPath.startsWith('/person'), onClick: () => navigate('/tree') },
+    { id: '/family', label: 'Mi Familia', icon: <Users className="w-5 h-5" />, active: currentPath === '/family', onClick: () => navigate('/family') },
+    { id: '/photos', label: 'Fotografías', icon: <ImageIcon className="w-5 h-5" />, active: currentPath === '/photos', onClick: () => navigate('/photos') },
+    { id: '/settings', label: 'Configuración', icon: <Settings className="w-5 h-5" />, active: currentPath === '/settings', onClick: () => navigate('/settings') },
+    { id: '/help', label: 'Ayuda', icon: <HelpCircle className="w-5 h-5" />, active: currentPath === '/help', onClick: () => navigate('/help') },
   ];
+
+  const pageTitle: Record<string, string> = {
+    '/': 'Panel de Control',
+    '/tree': 'Árbol Genealógico',
+    '/family': 'Mi Familia',
+    '/photos': 'Fotografías',
+    '/settings': 'Configuración',
+    '/help': 'Ayuda',
+  };
+
+  const title = currentPath.startsWith('/person')
+    ? 'Perfil de Familiar'
+    : (pageTitle[currentPath] ?? 'Árbol Gen Pro');
+
+  const handleSignIn = async () => {
+    if (!supabase) return;
+    setAuthLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email: authEmail, password: authPassword });
+      if (error) { addToast(error.message, 'error'); }
+      else { addToast('Sesión iniciada', 'success'); setAuthModalOpen(false); setAuthEmail(''); setAuthPassword(''); }
+    } catch (e) { addToast(`Error: ${e}`, 'error'); }
+    finally { setAuthLoading(false); }
+  };
+
+  const handleSignUp = async () => {
+    if (!supabase) return;
+    setAuthLoading(true);
+    try {
+      const { error } = await supabase.auth.signUp({
+        email: authEmail, password: authPassword,
+        options: { emailRedirectTo: `${window.location.origin}/` },
+      });
+      if (error) { addToast(error.message, 'error'); }
+      else { addToast('Cuenta creada. Revisa tu correo.', 'success'); setAuthModalOpen(false); setAuthEmail(''); setAuthPassword(''); }
+    } catch (e) { addToast(`Error: ${e}`, 'error'); }
+    finally { setAuthLoading(false); }
+  };
+
+  const handleCreateTree = async () => {
+    if (!wizardTreeName.trim() || !wizardMyName.trim()) {
+      addToast('Completa nombre del árbol y tu nombre', 'error');
+      return;
+    }
+    try {
+      const t = await treeRepository.create({ id: uuidv7(), name: wizardTreeName.trim(), ownerId: 'local-user' } as any);
+      await personRepository.create({ id: uuidv7(), treeId: t.entity.id, firstName: wizardMyName.trim(), lastName: wizardLastName.trim() || undefined, lifeStatus: 'alive' } as any);
+      setWizardOpen(false);
+      await load();
+      navigate('/tree');
+      addToast('Árbol creado. Comienza a agregar familiares.', 'success');
+    } catch (e) { addToast(`Error: ${e}`, 'error'); }
+  };
 
   const footerContent = (
     <div className="space-y-2">
       {userEmail && (
-        <div className="px-2 py-2 rounded-lg bg-slate-50">
-          <p className="text-xs font-medium text-slate-600 truncate">{userEmail}</p>
+        <div className="px-2 py-2 rounded-lg bg-neutral-50 dark:bg-neutral-800">
+          <p className="text-xs font-medium text-neutral-600 dark:text-neutral-400 truncate">{userEmail}</p>
         </div>
       )}
+      <button
+        onClick={toggleDark}
+        className="w-full flex items-center gap-2 px-4 py-2 text-sm font-medium text-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
+      >
+        {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+        <span>{darkMode ? 'Modo claro' : 'Modo oscuro'}</span>
+      </button>
       <button
         onClick={onLogout}
         className="w-full flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
@@ -97,105 +139,101 @@ export const PremiumLayout: React.FC<PremiumLayoutProps> = ({
     </div>
   );
 
+  const headerActions = (
+    <div className="flex items-center gap-3">
+      {trees.length > 1 && (
+        <TreeSelector
+          trees={trees}
+          activeTreeId={activeTreeId}
+          onSelectTree={(id) => { setActiveTreeId(id); load(); }}
+        />
+      )}
+      {!userEmail && (
+        <Button variant="secondary" size="sm" onClick={() => setAuthModalOpen(true)} icon={<Mail className="w-4 h-4" />}>
+          Ingresar
+        </Button>
+      )}
+      {trees.length === 0 ? (
+        <Button variant="primary" size="sm" onClick={() => setWizardOpen(true)} icon={<Plus className="w-4 h-4" />}>
+          Nuevo Árbol
+        </Button>
+      ) : currentPath === '/' && (
+        <Button variant="primary" size="sm" onClick={() => setWizardOpen(true)} icon={<Plus className="w-4 h-4" />}>
+          Nuevo Árbol
+        </Button>
+      )}
+    </div>
+  );
+
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Sidebar */}
+    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900">
       <Sidebar
         items={sidebarItems}
         footer={footerContent}
         logo={
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-600 to-primary-700 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center">
               <TreePine className="w-5 h-5 text-white" />
             </div>
-            <div className="flex-1">
-              <h1 className="text-sm font-bold text-slate-900">Árbol Gen Pro</h1>
-              <p className="text-xs text-slate-500">Genealogía Premium</p>
+            <div>
+              <h1 className="text-sm font-bold text-neutral-900 dark:text-neutral-100">Árbol Gen Pro</h1>
+              <p className="text-xs text-neutral-500">Genealogía Familiar</p>
             </div>
           </div>
         }
-        className="ml-0"
-        onItemClick={(itemId: string) => {
-          if (itemId !== 'settings' && itemId !== 'help') {
-            onNavigate?.(itemId);
-          }
-        }}
       />
 
-      {/* Main content */}
-      <div className="lg:ml-64">
-        {/* Header */}
-        <Header
-          title={title}
-          subtitle={subtitle}
-          breadcrumb={breadcrumb}
-          actions={headerActions}
-        />
+      <motion.div
+        animate={{ marginLeft: collapsed ? 64 : 256 }}
+        transition={{ duration: 0.2, ease: 'easeInOut' }}
+        className="min-w-0 hidden lg:block"
+      >
+        <Header title={title} actions={headerActions} />
 
-        {/* Page content */}
         <motion.main
-          initial={{ opacity: 0, y: 20 }}
+          key={currentPath}
+          initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          className="min-h-[calc(100vh-200px)]"
+          transition={{ duration: 0.25 }}
         >
           <PageContainer>{children}</PageContainer>
         </motion.main>
+      </motion.div>
 
-        {/* Footer */}
-        <footer className="border-t border-slate-200 bg-white py-8 mt-16">
-          <PageContainer className="!py-0">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-              <div>
-                <h3 className="font-semibold text-slate-900 mb-4">Árbol Gen Pro</h3>
-                <p className="text-sm text-slate-600">
-                  La plataforma genealógica más moderna y profesional.
-                </p>
-              </div>
-              <div>
-                <h4 className="font-semibold text-slate-900 mb-4">Producto</h4>
-                <ul className="space-y-2 text-sm text-slate-600">
-                  <li><a href="#" className="hover:text-primary-600 transition-colors">Características</a></li>
-                  <li><a href="#" className="hover:text-primary-600 transition-colors">Precios</a></li>
-                  <li><a href="#" className="hover:text-primary-600 transition-colors">Documentación</a></li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="font-semibold text-slate-900 mb-4">Empresa</h4>
-                <ul className="space-y-2 text-sm text-slate-600">
-                  <li><a href="#" className="hover:text-primary-600 transition-colors">Sobre nosotros</a></li>
-                  <li><a href="#" className="hover:text-primary-600 transition-colors">Blog</a></li>
-                  <li><a href="#" className="hover:text-primary-600 transition-colors">Contacto</a></li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="font-semibold text-slate-900 mb-4">Legal</h4>
-                <ul className="space-y-2 text-sm text-slate-600">
-                  <li><a href="#" className="hover:text-primary-600 transition-colors">Privacidad</a></li>
-                  <li><a href="#" className="hover:text-primary-600 transition-colors">Términos</a></li>
-                  <li><a href="#" className="hover:text-primary-600 transition-colors">Cookies</a></li>
-                </ul>
-              </div>
-            </div>
-            <div className="border-t border-slate-200 pt-8 flex items-center justify-between">
-              <p className="text-sm text-slate-600">
-                © 2024 Árbol Gen Pro. Todos los derechos reservados.
-              </p>
-              <div className="flex items-center gap-4">
-                <a href="#" className="text-slate-600 hover:text-primary-600 transition-colors">
-                  Twitter
-                </a>
-                <a href="#" className="text-slate-600 hover:text-primary-600 transition-colors">
-                  GitHub
-                </a>
-                <a href="#" className="text-slate-600 hover:text-primary-600 transition-colors">
-                  LinkedIn
-                </a>
-              </div>
-            </div>
-          </PageContainer>
-        </footer>
+      {/* Mobile content (no sidebar offset) */}
+      <div className="lg:hidden">
+        <Header title={title} actions={headerActions} />
+        <motion.main
+          key={currentPath + '-mobile'}
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25 }}
+        >
+          <PageContainer>{children}</PageContainer>
+        </motion.main>
       </div>
+
+      {/* Auth Modal */}
+      <Modal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} title="Ingresar">
+        <div className="space-y-4">
+          <Input label="Email" type="email" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} icon={<Mail className="w-4 h-4" />} />
+          <Input label="Contraseña" type="password" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} icon={<Lock className="w-4 h-4" />} />
+          <div className="flex gap-2">
+            <Button fullWidth variant="primary" onClick={handleSignIn} isLoading={authLoading}>Ingresar</Button>
+            <Button fullWidth variant="secondary" onClick={handleSignUp} isLoading={authLoading}>Registrarse</Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Create Tree Wizard */}
+      <Modal isOpen={wizardOpen} onClose={() => setWizardOpen(false)} title="Crear árbol genealógico">
+        <div className="space-y-4">
+          <Input label="Nombre del árbol" value={wizardTreeName} onChange={(e) => setWizardTreeName(e.target.value)} />
+          <Input label="Tu nombre" value={wizardMyName} onChange={(e) => setWizardMyName(e.target.value)} />
+          <Input label="Tu apellido (opcional)" value={wizardLastName} onChange={(e) => setWizardLastName(e.target.value)} />
+          <Button fullWidth variant="primary" onClick={handleCreateTree}>Crear Árbol</Button>
+        </div>
+      </Modal>
     </div>
   );
 };

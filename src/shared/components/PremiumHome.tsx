@@ -11,7 +11,7 @@ import { Users, TreePine, ImageIcon, Calendar, Plus, ArrowRight } from 'lucide-r
 interface HomeProps {
   onAddFamily?: () => void;
   onViewTree?: () => void;
-  onLoadTestData?: () => void;
+  onCreateTree?: (treeName: string, myName: string, myLastName: string) => Promise<void>;
   stats?: {
     totalFamilyMembers: number;
     generations: number;
@@ -23,7 +23,6 @@ interface HomeProps {
 export const PremiumHome: React.FC<HomeProps> = ({
   onAddFamily,
   onViewTree,
-  onLoadTestData,
   stats = {
     totalFamilyMembers: 0,
     generations: 0,
@@ -98,16 +97,7 @@ export const PremiumHome: React.FC<HomeProps> = ({
                 >
                   Ver tutorial
                 </Button>
-                {/* Dev debug button */}
-                {import.meta.env.DEV && (
-                  <Button
-                    variant="ghost"
-                    size="lg"
-                    onClick={onLoadTestData}
-                  >
-                    Cargar datos de prueba
-                  </Button>
-                )}
+
               </div>
             </CardBody>
           </Card>
@@ -232,32 +222,7 @@ export const PremiumHome: React.FC<HomeProps> = ({
             </div>
           </motion.div>
 
-          {/* Recent activity */}
-          <motion.div variants={itemVariants}>
-            <ChartContainer
-              title="Actividad Reciente"
-              subtitle="Últimas acciones en tu árbol"
-            >
-              <div className="space-y-4">
-                {[
-                  'Agregaste a María García',
-                  'Subiste 3 fotografías nuevas',
-                  'Registraste el cumpleaños de Juan',
-                ].map((activity, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors"
-                  >
-                    <div className="w-2 h-2 rounded-full bg-primary-600" />
-                    <p className="text-slate-700">{activity}</p>
-                    <span className="ml-auto text-xs text-slate-500">
-                      Hace 2 días
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </ChartContainer>
-          </motion.div>
+
         </>
       )}
 

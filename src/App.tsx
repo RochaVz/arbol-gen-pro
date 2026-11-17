@@ -1,498 +1,95 @@
 import { useEffect, useState } from 'react';
-import {
-  personRepository,
-  relationshipRepository,
-  eventRepository,
-  treeRepository,
-  photoRepository,
-  uuidv7,
-} from './core/db';
-import type { Person, Relationship, Event, Tree, Photo } from './core/db';
-import { useSyncStatus } from './shared/hooks/useSyncStatus';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { supabase } from './core/supabase';
-import { getPhotoBlobs } from './features/photo/services/photoStorage';
 import { startRealtimeSync, stopRealtimeSync } from './core/sync/realtime';
-
-import { EmptyState } from './shared/components/EmptyState';
+import { useAppStore } from './store';
+import { useToastStore } from './shared/hooks/useToast';
 import { PremiumLayout } from './shared/components/PremiumLayout';
-import { PremiumHome } from './shared/components/PremiumHome';
-import { ReactFlowTree } from './shared/components/ReactFlowTree';
-import { PersonProfileContainer } from './features/person/PersonProfileContainer';
-import { ButtonV2 as Button, InputV2 as Input, Toast } from './shared/components/ui';
-import { Modal } from './shared/components/ui/Modal';
-import { Plus, Mail, Lock, TreePine } from 'lucide-react';
+import { Toast } from './shared/components/ui';
+import { HomePage } from './pages/HomePage';
+import { TreePage } from './pages/TreePage';
+import { PersonPage } from './pages/PersonPage';
+import { FamilyPage } from './pages/FamilyPage';
+import { PhotosPage } from './pages/PhotosPage';
+import { SettingsPage } from './pages/SettingsPage';
+import { HelpPage } from './pages/HelpPage';
 
-type View = 'home' | 'tree' | 'person' | 'family' | 'photos' | 'settings' | 'help';
-type ColorMode = 'light' | 'dark';
-
-export default function App() {
-  const sync = useSyncStatus();
-  const [view, setView] = useState<View>('home');
-  const [toasts, setToasts] = useState<Array<{
-    id: string;
-    message: string;
-    type: 'success' | 'error' | 'warning' | 'info';
-  }>>([]);
-
-  const addToast = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info') => {
-    const id = uuidv7();
-    setToasts((prev) => [...prev, { id, message, type }]);
-    setTimeout(() => removeToast(id), 4000);
-  };
-
-  const removeToast = (id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-  };
-
-  // Initialize dark mode
-  useEffect(() => {
-    const storedMode = localStorage.getItem('color-mode') as ColorMode | null;
-    const systemMatch = window.matchMedia('(prefers-color-scheme: dark)').matches
-      ? 'dark'
-      : 'light';
-    const initialMode = storedMode ?? systemMatch;
-    if (initialMode === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, []);
-
-  // State management
-  const [trees, setTrees] = useState<Tree[]>([]);
-  const [persons, setPersons] = useState<Person[]>([]);
-  const [relationships, setRelationships] = useState<Relationship[]>([]);
-  const [events, setEvents] = useState<Event[]>([]);
-  const [photos, setPhotos] = useState<Photo[]>([]);
-  const [treeId, setTreeId] = useState('');
-  const [treeCenterId, setTreeCenterId] = useState<string>('');
-  const [personPhotoUrls, setPersonPhotoUrls] = useState<Record<string, string>>({});
-
-  // Auth state
+function AppShell() {
+  const load = useAppStore((s) => s.load);
+  const { toasts, removeToast } = useToastStore();
+  const { addToast } = useToastStore();
   const [sessionEmail, setSessionEmail] = useState<string | null>(null);
-  const [authEmail, setAuthEmail] = useState('');
-  const [authPassword, setAuthPassword] = useState('');
-  const [authLoading, setAuthLoading] = useState(false);
-  const [authModalOpen, setAuthModalOpen] = useState(false);
 
-  // Create tree wizard
-  const [wizardOpen, setWizardOpen] = useState(false);
-  const [wizardTreeName, setWizardTreeName] = useState('Mi familia');
-  const [wizardMyName, setWizardMyName] = useState('');
-  const [wizardLastName, setWizardLastName] = useState('');
-  const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
-
-  // Setup install prompt
+  // Dark mode init
   useEffect(() => {
-    const handler = (e: any) => {
-      e.preventDefault();
-      // Install prompt available but not used in new UI
-    };
-    window.addEventListener('beforeinstallprompt', handler);
-    return () => window.removeEventListener('beforeinstallprompt', handler);
+    const stored = localStorage.getItem('color-mode');
+    const system = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    if ((stored ?? system) === 'dark') document.documentElement.classList.add('dark');
   }, []);
 
-  // Setup realtime sync
+  // Realtime sync
   useEffect(() => {
     startRealtimeSync();
     return () => stopRealtimeSync();
   }, []);
 
-  // Setup auth listener
+  // Auth listener
   useEffect(() => {
     if (!supabase) return;
-
     let mounted = true;
     supabase.auth.getSession().then(({ data }) => {
       if (mounted) setSessionEmail(data.session?.user?.email ?? null);
     });
-
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
       if (mounted) setSessionEmail(s?.user?.email ?? null);
     });
-
-    return () => {
-      mounted = false;
-      sub.subscription.unsubscribe();
-    };
+    return () => { mounted = false; sub.subscription.unsubscribe(); };
   }, []);
 
   // Load data
-  const load = async () => {
-    try {
-      const t = await treeRepository.list();
-      setTrees(t);
-      if (!treeId && t.length) setTreeId(t[0].id);
-
-      const personsList = await personRepository.list();
-      setPersons(personsList);
-      setRelationships(await relationshipRepository.list());
-      setEvents(await eventRepository.list());
-
-      const photoList = await photoRepository.list();
-      setPhotos(photoList);
-
-      // Clean old URLs
-      Object.values(personPhotoUrls).forEach((u) => {
-        try {
-          URL.revokeObjectURL(u);
-        } catch {}
-      });
-
-      // Load photo URLs
-      const urls: Record<string, string> = {};
-      await Promise.all(
-        personsList.map(async (p) => {
-          const photo = photoList.filter((ph) => ph.personId === p.id && !ph.deletedAt)
-            .sort((a, b) => b.createdAt - a.createdAt)[0];
-          if (!photo) return;
-          try {
-            const blobs = await getPhotoBlobs(photo.id);
-            const thumb = blobs.find((b) => b.kind === 'thumbnail') ?? blobs[0];
-            if (thumb?.blob) urls[p.id] = URL.createObjectURL(thumb.blob);
-          } catch {}
-        })
-      );
-      setPersonPhotoUrls(urls);
-
-      await sync.refresh();
-    } catch (error) {
-      addToast(`Error al cargar datos: ${error}`, 'error');
-    }
-  };
-
-  useEffect(() => {
-    void load();
-  }, []);
-
-  // Sync tree person
-  useEffect(() => {
-    if (!treeId) {
-      setTreeCenterId('');
-      return;
-    }
-    const list = persons.filter((p: any) => p.treeId === treeId && !p.deletedAt);
-    if (list.length === 0) {
-      setTreeCenterId('');
-      return;
-    }
-    if (!treeCenterId || !list.some((p: any) => p.id === treeCenterId)) {
-      setTreeCenterId(list[0].id);
-    }
-  }, [treeId, persons, treeCenterId]);
-
-  // Filter data by tree
-  const inTree = <T extends { treeId?: string },>(arr: T[]) =>
-    treeId ? arr.filter((x) => x.treeId === treeId) : arr;
-
-  const personsT = inTree(persons);
-  const relationshipsT = inTree(relationships);
-  const eventsT = inTree(events);
-
-  // Auth handlers
-  const handleSignIn = async () => {
-    if (!supabase) return;
-    setAuthLoading(true);
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: authEmail,
-        password: authPassword,
-      });
-      if (error) {
-        addToast(error.message, 'error');
-      } else {
-        addToast('Sesi├│n iniciada', 'success');
-        setAuthModalOpen(false);
-        setAuthEmail('');
-        setAuthPassword('');
-      }
-    } catch (error) {
-      addToast(`Error: ${error}`, 'error');
-    } finally {
-      setAuthLoading(false);
-    }
-  };
-
-  const handleSignUp = async () => {
-    if (!supabase) return;
-    setAuthLoading(true);
-    try {
-      const { error } = await supabase.auth.signUp({
-        email: authEmail,
-        password: authPassword,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
-        },
-      });
-      if (error) {
-        addToast(error.message, 'error');
-      } else {
-        addToast('Cuenta creada. Revisa tu correo.', 'success');
-        setAuthModalOpen(false);
-        setAuthEmail('');
-        setAuthPassword('');
-      }
-    } catch (error) {
-      addToast(`Error: ${error}`, 'error');
-    } finally {
-      setAuthLoading(false);
-    }
-  };
+  useEffect(() => { void load(); }, [load]);
 
   const handleSignOut = async () => {
     if (!supabase) return;
     try {
       await supabase.auth.signOut();
-      addToast('Sesi├│n cerrada', 'success');
-    } catch (error) {
-      addToast(`Error: ${error}`, 'error');
-    }
-  };
-
-  // Create tree
-  const handleCreateTree = async () => {
-    if (!wizardTreeName.trim()) {
-      addToast('Pon un nombre al ├írbol', 'error');
-      return;
-    }
-    if (!wizardMyName.trim()) {
-      addToast('Pon tu nombre', 'error');
-      return;
-    }
-
-    try {
-      const t = await treeRepository.create({
-        id: uuidv7(),
-        name: wizardTreeName.trim(),
-        ownerId: 'local-user',
-      } as any);
-
-      const me = await personRepository.create({
-        id: uuidv7(),
-        treeId: t.entity.id,
-        firstName: wizardMyName.trim(),
-        lastName: wizardLastName.trim() || undefined,
-        lifeStatus: 'alive',
-      } as any);
-
-      setTreeId(t.entity.id);
-      setTreeCenterId(me.entity.id);
-      setWizardOpen(false);
-      setView('tree');
-      addToast('├ürbol creado. Comienza a agregar familiares.', 'success');
-      await load();
-    } catch (error) {
-      addToast(`Error: ${error}`, 'error');
-    }
-  };
-
-  // Render content based on view
-  const renderContent = () => {
-    switch (view) {
-      case 'home':
-        return (
-          <PremiumHome
-            onAddFamily={() => setWizardOpen(true)}
-            onViewTree={() => setView('tree')}
-            stats={{
-              totalFamilyMembers: personsT.length,
-              generations: Math.max(1, Math.ceil(personsT.length / 3)),
-              photos: photos.length,
-              events: eventsT.length,
-            }}
-          />
-        );
-      case 'tree':
-        return trees.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-slate-600 mb-6">No tienes ├írboles creados a├║n.</p>
-            <Button onClick={() => setWizardOpen(true)} variant="primary">
-              <Plus className="w-5 h-5" /> Crear primer ├írbol
-            </Button>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-2xl font-bold text-slate-900">Tu ├ürbol Geneal├│gico</h2>
-              <p className="text-slate-600">Visualizaci├│n interactiva de tu ├írbol geneal├│gico con {personsT.length} miembros</p>
-            </div>
-            <ReactFlowTree
-              persons={Array.isArray(personsT) ? personsT : []}
-              relationships={Array.isArray(relationshipsT) ? relationshipsT : []}
-              photos={typeof personPhotoUrls === 'object' && personPhotoUrls !== null ? personPhotoUrls : {}}
-              treeCenterId={typeof treeCenterId === 'string' && treeCenterId.length > 0 ? treeCenterId : undefined}
-              onNodeClick={(personId) => {
-                if (typeof personId === 'string') {
-                  setSelectedPersonId(personId);
-                  setView('person');
-                }
-              }}
-            />
-          </div>
-        );
-      case 'person':
-        return selectedPersonId ? (
-          <PersonProfileContainer
-            key={selectedPersonId}
-            personId={selectedPersonId}
-            persons={personsT}
-            relationships={relationshipsT}
-            events={eventsT}
-            photos={photos}
-            onSelectPerson={setSelectedPersonId}
-            onBack={() => setView('tree')}
-            onRefresh={load}
-          />
-        ) : null;
-      default:
-        return (
-          <div className="text-center py-12">
-            <EmptyState
-  icon={<TreePine className="w-20 h-20 text-primary-600 mb-6" />}
-  title="Sin datos para mostrar"
-  description="No hay miembros de la familia o relaciones para visualizar el árbol genealógico."
-  action={<button className="mt-4 rounded-lg bg-primary-600 px-4 py-2 text-white font-medium hover:bg-primary-500 transition-colors">
-    Crear árbol familiar
-  </button>}
-/>
-          </div>
-        );
+      addToast('Sesión cerrada', 'success');
+    } catch (e) {
+      addToast(`Error: ${e}`, 'error');
     }
   };
 
   return (
-    <PremiumLayout
-      title={
-        view === 'home'
-          ? 'Panel de Control'
-          : view === 'tree'
-            ? '├ürbol Geneal├│gico'
-            : 'Perfil de Familiar'
-      }
-      subtitle={
-        view === 'home'
-          ? 'Bienvenido a tu ├írbol geneal├│gico'
-          : 'Explora tu historia familiar'
-      }
-      currentView={view}
-      onNavigate={(newView) => setView(newView as View)}
-      userEmail={sessionEmail}
-      onLogout={handleSignOut}
-      headerActions={
-        <div className="flex items-center gap-3">
-          {!sessionEmail && (
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setAuthModalOpen(true)}
-            >
-              <Mail className="w-4 h-4" /> Ingresar
-            </Button>
-          )}
-          {view === 'home' && trees.length > 0 && (
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => setWizardOpen(true)}
-            >
-              <Plus className="w-4 h-4" /> Nuevo ├ürbol
-            </Button>
-          )}
-        </div>
-      }
-    >
-      {renderContent()}
-
-      {/* Auth Modal */}
-      <Modal
-        isOpen={authModalOpen}
-        onClose={() => setAuthModalOpen(false)}
-        title="Ingresar"
-      >
-        <div className="space-y-4">
-          <Input
-            label="Email"
-            type="email"
-            value={authEmail}
-            onChange={(e) => setAuthEmail(e.target.value)}
-            icon={<Mail className="w-4 h-4" />}
-          />
-          <Input
-            label="Contrase├▒a"
-            type="password"
-            value={authPassword}
-            onChange={(e) => setAuthPassword(e.target.value)}
-            icon={<Lock className="w-4 h-4" />}
-          />
-          <div className="flex gap-2">
-            <Button
-              fullWidth
-              variant="primary"
-              onClick={handleSignIn}
-              isLoading={authLoading}
-            >
-              Ingresar
-            </Button>
-            <Button
-              fullWidth
-              variant="secondary"
-              onClick={handleSignUp}
-              isLoading={authLoading}
-            >
-              Registrarse
-            </Button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Create Tree Wizard */}
-      <Modal
-        isOpen={wizardOpen}
-        onClose={() => setWizardOpen(false)}
-        title="Crear un nuevo ├írbol geneal├│gico"
-      >
-        <div className="space-y-4">
-          <Input
-            label="Nombre del ├írbol"
-            value={wizardTreeName}
-            onChange={(e) => setWizardTreeName(e.target.value)}
-          />
-          <Input
-            label="Tu nombre"
-            value={wizardMyName}
-            onChange={(e) => setWizardMyName(e.target.value)}
-          />
-          <Input
-            label="Tu apellido (opcional)"
-            value={wizardLastName}
-            onChange={(e) => setWizardLastName(e.target.value)}
-          />
-          <Button
-            fullWidth
-            variant="primary"
-            onClick={handleCreateTree}
-          >
-            Crear ├ürbol
-          </Button>
-        </div>
-      </Modal>
+    <PremiumLayout userEmail={sessionEmail} onLogout={handleSignOut}>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/tree" element={<TreePage />} />
+        <Route path="/person/:personId" element={<PersonPage />} />
+        <Route path="/family" element={<FamilyPage />} />
+        <Route path="/photos" element={<PhotosPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/help" element={<HelpPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
 
       {/* Toast notifications */}
       <div className="fixed bottom-6 right-6 z-50 space-y-2 max-w-sm">
         {toasts.map((toast) => (
-          <div
-            key={toast.id}
-            className="animate-in fade-in slide-in-from-bottom-20 duration-300"
-          >
-            <Toast
-              variant={toast.type}
-              onClose={() => removeToast(toast.id)}
-            >
+          <div key={toast.id} className="animate-in fade-in slide-in-from-bottom-4 duration-300">
+            <Toast variant={toast.type} onClose={() => removeToast(toast.id)}>
               {toast.message}
             </Toast>
           </div>
         ))}
       </div>
     </PremiumLayout>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AppShell />
+    </BrowserRouter>
   );
 }

@@ -2,19 +2,31 @@
 > arbol-gen-pro@0.0.0 build
 > tsc -b && vite build
 
-src/App.tsx(345,13): error TS2322: Type '{ person: Person; photoUrl: string; parents: Person[]; children: Person[]; partners: Person[]; events: { id: string; title: string; description: string | undefined; year: number | undefined; date: string | undefined; type: "event" | ... 1 more ... | "memory"; }[]; ... 10 more ...; onBack: () => void; }' is not assignable to type 'IntrinsicAttributes & PersonProfilePageProps'.
-  Property 'person' does not exist on type 'IntrinsicAttributes & PersonProfilePageProps'. Did you mean 'personId'?
-src/App.tsx(360,30): error TS7006: Parameter 'id' implicitly has an 'any' type.
-src/features/tree/components/EmotionalTree.tsx(102,17): error TS2322: Type '{ key: string; person: Person; photoUrl: string; isCenter: boolean; onSelect: (id: string) => void; size: "md" | "lg"; style: { position: string; left: number; top: number; }; }' is not assignable to type 'IntrinsicAttributes & TreeNodeProps & RefAttributes<HTMLDivElement>'.
-  Property 'style' does not exist on type 'IntrinsicAttributes & TreeNodeProps & RefAttributes<HTMLDivElement>'.
-src/features/tree/components/TreeNode.tsx(39,20): error TS2339: Property 'tagName' does not exist on type 'EventTarget'.
-src/features/tree/components/TreeNode.tsx(63,9): error TS17001: JSX elements cannot have multiple attributes with the same name.
-src/shared/components/PersonCard.tsx(35,24): error TS2339: Property 'city' does not exist on type 'string'.
-src/shared/components/PersonCard.tsx(35,36): error TS2339: Property 'region' does not exist on type 'string'.
-src/shared/components/PersonCard.tsx(35,50): error TS2339: Property 'country' does not exist on type 'string'.
-src/shared/components/PersonCard.tsx(136,52): error TS2339: Property 'relationships' does not exist on type 'Person'.
-src/shared/components/PersonCard.tsx(142,25): error TS2339: Property 'relationships' does not exist on type 'Person'.
-src/shared/components/ui/Avatar.tsx(37,11): error TS6133: 'border' is declared but its value is never read.
-src/shared/components/ui/Drawer.tsx(26,11): error TS2322: Type '(e: MouseEvent) => void' is not assignable to type 'MouseEventHandler<HTMLDivElement>'.
-  Types of parameters 'e' and 'event' are incompatible.
-    Type 'MouseEvent<HTMLDivElement, MouseEvent>' is missing the following properties from type 'MouseEvent': layerX, layerY, offsetX, offsetY, and 16 more.
+src/pages/FamilyPage.tsx(1,8): error TS6133: 'React' is declared but its value is never read.
+src/pages/FamilyPage.tsx(6,31): error TS6133: 'Trash2' is declared but its value is never read.
+src/pages/FamilyPage.tsx(7,29): error TS2307: Cannot find module '../types' or its corresponding type declarations.
+src/pages/FamilyPage.tsx(12,11): error TS6196: 'FamilyMember' is declared but never used.
+src/pages/FamilyPage.tsx(41,18): error TS2339: Property 'targetPersonId' does not exist on type 'Relationship'.
+src/pages/FamilyPage.tsx(57,26): error TS2339: Property 'sourcePerson' does not exist on type 'Relationship'.
+src/pages/FamilyPage.tsx(59,30): error TS2339: Property 'targetPersonId' does not exist on type 'Relationship'.
+src/pages/FamilyPage.tsx(60,27): error TS2339: Property 'targetPersonId' does not exist on type 'Relationship'.
+src/pages/FamilyPage.tsx(75,13): error TS6133: 'gen' is declared but its value is never read.
+src/pages/FamilyPage.tsx(97,11): error TS2353: Object literal may only specify known properties, and 'label' does not exist in type 'ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<...>'.
+src/pages/HelpPage.tsx(2,45): error TS6133: 'Users' is declared but its value is never read.
+src/pages/HelpPage.tsx(2,75): error TS6133: 'Search' is declared but its value is never read.
+src/pages/PhotosPage.tsx(1,8): error TS6133: 'React' is declared but its value is never read.
+src/pages/PhotosPage.tsx(5,27): error TS6133: 'Trash2' is declared but its value is never read.
+src/pages/PhotosPage.tsx(5,35): error TS6133: 'ExternalLink' is declared but its value is never read.
+src/pages/PhotosPage.tsx(30,20): error TS2339: Property 'forEach' does not exist on type 'string | never[]'.
+  Property 'forEach' does not exist on type 'string'.
+src/pages/PhotosPage.tsx(30,29): error TS7006: Parameter 'url' implicitly has an 'any' type.
+src/pages/PhotosPage.tsx(30,34): error TS7006: Parameter 'idx' implicitly has an 'any' type.
+src/pages/PhotosPage.tsx(68,11): error TS2353: Object literal may only specify known properties, and 'label' does not exist in type 'ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<...>'.
+src/pages/SettingsPage.tsx(1,8): error TS6133: 'React' is declared but its value is never read.
+src/pages/SettingsPage.tsx(1,27): error TS6133: 'useEffect' is declared but its value is never read.
+src/pages/SettingsPage.tsx(4,18): error TS6133: 'Input' is declared but its value is never read.
+src/pages/SettingsPage.tsx(6,49): error TS6133: 'Trash2' is declared but its value is never read.
+src/pages/SettingsPage.tsx(10,32): error TS2339: Property 'setActiveTree' does not exist on type 'AppState'.
+src/pages/SettingsPage.tsx(19,10): error TS6133: 'deleteModalOpen' is declared but its value is never read.
+src/pages/SettingsPage.tsx(19,27): error TS6133: 'setDeleteModalOpen' is declared but its value is never read.
+src/pages/SettingsPage.tsx(22,9): error TS6133: 'activTree' is declared but its value is never read.
