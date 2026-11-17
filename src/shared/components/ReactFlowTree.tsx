@@ -27,6 +27,7 @@ interface ReactFlowTreeProps {
   onNodeClick?: (personId: string) => void;
   className?: string;
   onSearchTermChange?: (term: string) => void;
+  layout?: 'horizontal' | 'vertical';
 }
 
 interface FamilyNodeData {
@@ -35,6 +36,7 @@ interface FamilyNodeData {
   photoUrl?: string;
   isAlive: boolean;
   isTreeCenter: boolean;
+  generation?: number;
 }
 
 const EMPTY_PHOTOS: Record<string, string> = {};
@@ -97,6 +99,7 @@ const ReactFlowTreeContent: React.FC<ReactFlowTreeProps> = ({
   treeCenterId,
   onNodeClick,
   className,
+  layout: _layout = 'horizontal',
 }) => {
   // Safely generate nodes from persons with error handling
   const initialNodes: Node<FamilyNodeData>[] = useMemo(() => {
@@ -195,6 +198,7 @@ const ReactFlowTreeContent: React.FC<ReactFlowTreeProps> = ({
             const lastName = String(person.lastName || '').trim();
             const label = `${firstName} ${lastName}`.trim() || 'Sin nombre';
             const photoUrl = photos[personId] || undefined;
+            const generation = person.generation ?? 0;
 
             return {
               id: personId,
@@ -204,6 +208,7 @@ const ReactFlowTreeContent: React.FC<ReactFlowTreeProps> = ({
                 photoUrl,
                 isAlive,
                 isTreeCenter,
+                generation,
               },
               position,
               type: 'familyNode' as const,
@@ -370,7 +375,7 @@ const ReactFlowTreeContent: React.FC<ReactFlowTreeProps> = ({
     return (
       <div
         className={cn(
-          'w-full h-[calc(100vh-theme(spacing.32))] bg-gradient-to-br from-slate-50 dark:from-slate-900 to-slate-100 dark:to-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden flex items-center justify-center',
+          'w-full h-full bg-gradient-to-br from-slate-50 dark:from-slate-900 to-slate-100 dark:to-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden flex items-center justify-center',
           className
         )}
       >
@@ -389,7 +394,7 @@ const ReactFlowTreeContent: React.FC<ReactFlowTreeProps> = ({
   return (
     <div
       className={cn(
-        'w-full h-[calc(100vh-theme(spacing.32))] bg-gradient-to-br from-slate-50 dark:from-slate-900 to-slate-100 dark:to-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden',
+        'w-full h-full bg-gradient-to-br from-slate-50 dark:from-slate-900 to-slate-100 dark:to-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden',
         className
       )}
     >

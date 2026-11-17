@@ -110,6 +110,7 @@ export function TreePage() {
             photos={personPhotoUrls}
             treeCenterId={treeCenterId}
             onNodeClick={(personId) => navigate(`/person/${personId}`)}
+            layout={currentLayout}
             className="rounded-none"
           />
         )}

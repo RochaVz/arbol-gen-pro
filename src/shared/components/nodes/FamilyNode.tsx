@@ -14,13 +14,14 @@ interface FamilyNodeData {
   photoUrl?: string;
   isAlive: boolean;
   isTreeCenter: boolean;
+  generation?: number;
 }
 
 export const FamilyNode: React.FC<NodeProps<FamilyNodeData>> = ({
   data,
   selected,
 }) => {
-  const { label, person, photoUrl, isAlive, isTreeCenter } = data;
+  const { label, person, photoUrl, isAlive, isTreeCenter, generation } = data;
 
   // Determine gender border color (subtle left border)
   const genderBorderColor = person?.sex === 'male' ? 'border-l-blue-500' : 'border-l-pink-500';
@@ -81,6 +82,13 @@ export const FamilyNode: React.FC<NodeProps<FamilyNodeData>> = ({
         {isTreeCenter && (
           <div className="absolute top-1 right-1 bg-accent-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full shadow-sm">
             ★
+          </div>
+        )}
+
+        {/* Generation badge - top left */}
+        {generation !== undefined && (
+          <div className="absolute top-1 left-1 bg-primary-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full shadow-sm">
+            G{generation}
           </div>
         )}
 
