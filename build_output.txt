@@ -2,31 +2,16 @@
 > arbol-gen-pro@0.0.0 build
 > tsc -b && vite build
 
-src/pages/FamilyPage.tsx(1,8): error TS6133: 'React' is declared but its value is never read.
-src/pages/FamilyPage.tsx(6,31): error TS6133: 'Trash2' is declared but its value is never read.
-src/pages/FamilyPage.tsx(7,29): error TS2307: Cannot find module '../types' or its corresponding type declarations.
-src/pages/FamilyPage.tsx(12,11): error TS6196: 'FamilyMember' is declared but never used.
-src/pages/FamilyPage.tsx(41,18): error TS2339: Property 'targetPersonId' does not exist on type 'Relationship'.
-src/pages/FamilyPage.tsx(57,26): error TS2339: Property 'sourcePerson' does not exist on type 'Relationship'.
-src/pages/FamilyPage.tsx(59,30): error TS2339: Property 'targetPersonId' does not exist on type 'Relationship'.
-src/pages/FamilyPage.tsx(60,27): error TS2339: Property 'targetPersonId' does not exist on type 'Relationship'.
-src/pages/FamilyPage.tsx(75,13): error TS6133: 'gen' is declared but its value is never read.
-src/pages/FamilyPage.tsx(97,11): error TS2353: Object literal may only specify known properties, and 'label' does not exist in type 'ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<...>'.
-src/pages/HelpPage.tsx(2,45): error TS6133: 'Users' is declared but its value is never read.
-src/pages/HelpPage.tsx(2,75): error TS6133: 'Search' is declared but its value is never read.
-src/pages/PhotosPage.tsx(1,8): error TS6133: 'React' is declared but its value is never read.
-src/pages/PhotosPage.tsx(5,27): error TS6133: 'Trash2' is declared but its value is never read.
-src/pages/PhotosPage.tsx(5,35): error TS6133: 'ExternalLink' is declared but its value is never read.
-src/pages/PhotosPage.tsx(30,20): error TS2339: Property 'forEach' does not exist on type 'string | never[]'.
-  Property 'forEach' does not exist on type 'string'.
-src/pages/PhotosPage.tsx(30,29): error TS7006: Parameter 'url' implicitly has an 'any' type.
-src/pages/PhotosPage.tsx(30,34): error TS7006: Parameter 'idx' implicitly has an 'any' type.
-src/pages/PhotosPage.tsx(68,11): error TS2353: Object literal may only specify known properties, and 'label' does not exist in type 'ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<...>'.
-src/pages/SettingsPage.tsx(1,8): error TS6133: 'React' is declared but its value is never read.
-src/pages/SettingsPage.tsx(1,27): error TS6133: 'useEffect' is declared but its value is never read.
-src/pages/SettingsPage.tsx(4,18): error TS6133: 'Input' is declared but its value is never read.
-src/pages/SettingsPage.tsx(6,49): error TS6133: 'Trash2' is declared but its value is never read.
-src/pages/SettingsPage.tsx(10,32): error TS2339: Property 'setActiveTree' does not exist on type 'AppState'.
-src/pages/SettingsPage.tsx(19,10): error TS6133: 'deleteModalOpen' is declared but its value is never read.
-src/pages/SettingsPage.tsx(19,27): error TS6133: 'setDeleteModalOpen' is declared but its value is never read.
-src/pages/SettingsPage.tsx(22,9): error TS6133: 'activTree' is declared but its value is never read.
+src/pages/FamilyPage.tsx(7,10): error TS6133: 'generateTree' is declared but its value is never read.
+src/pages/FamilyPage.tsx(7,24): error TS6133: 'analyzeTree' is declared but its value is never read.
+src/pages/TreePage.tsx(16,10): error TS6133: 'stitchStatus' is declared but its value is never read.
+src/pages/TreePage.tsx(17,10): error TS6133: 'stitchResult' is declared but its value is never read.
+src/pages/TreePage.tsx(19,25): error TS2304: Cannot find name 'useMemo'.
+src/pages/TreePage.tsx(47,27): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/pages/TreePage.tsx(48,27): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/pages/TreePage.tsx(101,64): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/pages/TreePage.tsx(104,19): error TS2304: Cannot find name 'addToast'.
+src/pages/TreePage.tsx(107,19): error TS2304: Cannot find name 'addToast'.
+src/pages/TreePage.tsx(124,45): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/pages/TreePage.tsx(131,19): error TS2304: Cannot find name 'addToast'.
+src/pages/TreePage.tsx(134,19): error TS2304: Cannot find name 'addToast'.

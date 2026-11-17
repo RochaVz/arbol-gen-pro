@@ -4,6 +4,7 @@ import { useAppStore } from '../store';
 import { Input, Button } from '../shared/components/ui';
 import { EmptyState } from '../shared/components/EmptyState';
 import { Search, Plus, Users } from 'lucide-react';
+import { isStitchConfigured } from '../services/stitch';
 
 export function FamilyPage() {
   const navigate = useNavigate();
@@ -95,6 +96,16 @@ export function FamilyPage() {
         <div>
           <h1 className="text-3xl font-bold text-neutral-900 dark:text-white">Mi Familia</h1>
           <p className="text-neutral-600 dark:text-neutral-400">{personsInTree.length} miembros registrados</p>
+          {isStitchConfigured() && (
+            <div className="px-4 py-2 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-sm mt-2">
+              <div className="flex items-center gap-2">
+                <span className="text-green-600 dark:text-green-400">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"/></svg>
+                  IA activa
+                </span>
+              </div>
+            </div>
+          )}
         </div>
         <Button
           variant="primary"
