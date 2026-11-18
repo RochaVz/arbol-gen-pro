@@ -106,14 +106,20 @@ const PremiumLayoutInner: React.FC<PremiumLayoutProps> = ({ children, onLogout, 
       return;
     }
     try {
-      const t = await treeRepository.create({ id: uuidv7(), name: wizardTreeName.trim(), ownerId: 'local-user' } as any);
-      await personRepository.create({ id: uuidv7(), treeId: t.entity.id, firstName: wizardMyName.trim(), lastName: wizardLastName.trim() || undefined, lifeStatus: 'alive' } as any);
-      setWizardOpen(false);
+      const t = await treeRepository.create({
+        id: uuidv7(), name: wizardTreeName.trim(), ownerId: 'local-user',
+      } as any);
+      await personRepository.create({
+        id: uuidv7(), treeId: t.entity.id,
+        firstName: wizardMyName.trim(), lastName: wizardLastName.trim() || undefined, lifeStatus: 'alive',
+      } as any);
       await load();
       navigate('/tree');
       addToast('Árbol creado. Comienza a agregar familiares.', 'success');
-    } catch (e) { addToast(`Error: ${e}`, 'error'); }
-  };
+    } catch (e) {
+      addToast(`Error: ${e}`, 'error');
+    }
+  }
 
   const footerContent = (
     <div className="space-y-2">
