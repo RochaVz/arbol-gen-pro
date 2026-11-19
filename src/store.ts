@@ -8,8 +8,10 @@ import {
   photoRepository,
 } from './core/db';
 import { getPhotoBlobs } from './features/photo/services/photoStorage';
+import { db } from './core/db';
 
 interface AppState {
+  cleanAll: () => void;
   trees: Tree[];
   persons: Person[];
   relationships: Relationship[];
@@ -36,6 +38,21 @@ export const useAppStore = create<AppState>((set, get) => ({
   error: null,
 
   setActiveTreeId: (id) => set({ activeTreeId: id }),
+
+  cleanAll: async () => {
+    await db.transaction('rw', [db.trees, db.persons, db.relationships, db.events, db.photos, db.photoBlobs, db.syncOperations], async () => {
+      await Promise.all([
+        db.trees.clear(),
+        db.persons.clear(),
+        db.relationships.clear(),
+        db.events.clear(),
+        db.photos.clear(),
+        db.photoBlobs.clear(),
+        db.syncOperations.clear(),
+      ]);
+    });
+    set({ trees: [], persons: [], relationships: [], events: [], photos: [], personPhotoUrls: {}, activeTreeId: '', loading: false, error: null });
+  },
 
   load: async () => {
     set({ loading: true, error: null });
