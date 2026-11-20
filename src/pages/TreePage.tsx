@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../store';
 import { ReactFlowTree } from '../shared/components/ReactFlowTree';
 import { AppearanceControls } from '../features/family-tree/components/designer/appearanceControls';
-import { TreeTemplateGallery } from '../features/family-tree/components/templates/treeTemplateGallery';
+import { TreeTemplateGallery, treeStyles } from '../features/family-tree/components/templates/treeTemplateGallery';
 import { Button } from '../shared/components/ui';
 import { Plus } from 'lucide-react';
 import { useState, useMemo } from 'react';
@@ -13,6 +13,13 @@ export function TreePage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedGeneration, setSelectedGeneration] = useState<number | null>(null);
   const [styleId, setStyleId] = useState<string>('');
+
+  // Map style orientation to ReactFlow layout
+  const layout = useMemo(() => {
+    if (!styleId) return 'horizontal';
+    const style = treeStyles.find((s) => s.id === styleId);
+    return style?.orientation === 'radial' ? 'horizontal' : style?.orientation || 'horizontal';
+  }, [styleId]);
 
   const personsInTree = useMemo(() => {
     let filtered = activeTreeId
@@ -126,6 +133,7 @@ export function TreePage() {
             photos={personPhotoUrls}
             treeCenterId={treeCenterId}
             onNodeClick={(personId) => navigate(`/person/${personId}`)}
+            layout={layout}
             className="rounded-none"
           />
         )}
