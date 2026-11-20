@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { Person, Relationship, Event, Tree, Photo } from './core/db';
+import { HistoryService } from './features/family-tree/services/historyService';
 import {
   personRepository,
   relationshipRepository,
@@ -21,10 +22,15 @@ interface AppState {
   activeTreeId: string;
   loading: boolean;
   error: string | null;
-
+  canUndo: boolean;
+  canRedo: boolean;
+  undo: () => import('./features/family-tree/services/historyService').Operation | null;
+  redo: () => import('./features/family-tree/services/historyService').Operation | null;
   setActiveTreeId: (id: string) => void;
   load: () => Promise<void>;
 }
+
+const historyService = new HistoryService();
 
 export const useAppStore = create<AppState>((set, get) => ({
   trees: [],
@@ -36,8 +42,96 @@ export const useAppStore = create<AppState>((set, get) => ({
   activeTreeId: '',
   loading: false,
   error: null,
-
-  setActiveTreeId: (id) => set({ activeTreeId: id }),
+  canUndo: historyService.canUndo(),
+  canRedo: historyService.canRedo(),
+  undo: () => {
+    const op = historyService.undo();
+    set({ canUndo: historyService.canUndo(), canRedo: historyService.canRedo() });
+    return op;
+  },
+  redo: () => {
+    const op = historyService.redo();
+    set({ canUndo: historyService.canUndo(), canRedo: historyService.canRedo() });
+    return op;
+  },
+  addParent: async (op: { personId: string; fatherId?: string; motherId?: string; fatherName: string; motherName: string; personName: string; personLastName?: string }) => {
+    set({ loading: true, error: null });
+    try {
+      historyService.recordOperation({
+        type: 'ADD_PARENT',
+        timestamp: Date.now(),
+        params: op,
+      });
+      set({ canUndo: historyService.canUndo(), canRedo: historyService.canRedo() });
+      await personRepository.create({
+        id: op.personId,
+        treeId: get().activeTreeId || '',
+        firstName: op.personName,
+        lastName: op.personLastName || '',
+        generation: 1,
+        syncStatus: 'synced',
+        // @ts-ignore - relaxing type requirements for family operations
+        ...op,
+      } as any);
+      if (op.fatherId) {
+        await relationshipRepository.create({
+          id: `${op.personId}-father`,
+          treeId: get().activeTreeId || '',
+          person1Id: op.fatherId,
+          person2Id: op.personId,
+          type: 'parent',
+          syncStatus: 'synced',
+          // @ts-ignore
+          ...op,
+        } as any);
+      }
+      if (op.motherId) {
+        await relationshipRepository.create({
+          id: `${op.personId}-mother`,
+          treeId: get().activeTreeId || '',
+          person1Id: op.motherId,
+          person2Id: op.personId,
+          type: 'parent',
+          syncStatus: 'synced',
+          // @ts-ignore
+          ...op,
+        } as any);
+      }
+      console.log('Add parent operation completed:', op);
+    } catch (e) {
+      set({ error: String(e) });
+    } finally {
+      set({ loading: false });
+    }
+  },
+  addChild: async (op: { parentId: string; childId?: string; childName: string; childLastName?: string; childSex?: string }) => {
+    set({ loading: true, error: null });
+    try {
+      historyService.recordOperation({
+        type: 'ADD_CHILD',
+        timestamp: Date.now(),
+        params: op,
+      });
+      set({ canUndo: historyService.canUndo(), canRedo: historyService.canRedo() });
+      await personRepository.create({
+        id: op.childId || `child-${Date.now()}`,
+        treeId: get().activeTreeId || '',
+        firstName: op.childName,
+        lastName: op.childLastName || '',
+        generation: get().persons.length + 1,
+        sex: op.childSex,
+        syncStatus: 'synced',
+        // @ts-ignore
+        ...op,
+      } as any);
+      console.log('Add child operation completed:', op);
+    } catch (e) {
+      set({ error: String(e) });
+    } finally {
+      set({ loading: false });
+    }
+  },
+  setActiveTreeId: (id: string) => set({ activeTreeId: id }),
 
   cleanAll: async () => {
     await db.transaction('rw', [db.trees, db.persons, db.relationships, db.events, db.photos, db.photoBlobs, db.syncOperations], async () => {
@@ -51,7 +145,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         db.syncOperations.clear(),
       ]);
     });
-    set({ trees: [], persons: [], relationships: [], events: [], photos: [], personPhotoUrls: {}, activeTreeId: '', loading: false, error: null });
+    set({ trees: [], persons: [], relationships: [], events: [], photos: [], personPhotoUrls: {}, activeTreeId: '', loading: false, error: null, canUndo: false, canRedo: false });
   },
 
   load: async () => {
@@ -86,7 +180,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         })
       );
 
-      set({ trees, persons, relationships, events, photos, personPhotoUrls, activeTreeId, loading: false });
+      set({ trees, persons, relationships, events, photos, personPhotoUrls, activeTreeId, loading: false, canUndo: historyService.canUndo(), canRedo: historyService.canRedo() });
     } catch (e) {
       set({ error: String(e), loading: false });
     }
