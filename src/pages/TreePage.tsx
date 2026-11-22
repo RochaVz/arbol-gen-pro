@@ -5,7 +5,36 @@ import { AppearanceControls } from '../features/family-tree/components/designer/
 import { TreeTemplateGallery, treeStyles } from '../features/family-tree/components/templates/treeTemplateGallery';
 import { Button } from '../shared/components/ui';
 import { Plus } from 'lucide-react';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+
+// Error Boundary component to catch and display errors
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('Error en TreePage:', error);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return <div className="p-8 text-center bg-red-100 dark:bg-red-900 text-red-800 rounded-lg">
+        <h3 className="text-2xl font-bold mb-4">⚠️ Error en la Galería</h3>
+        <p className="mb-4">Ocurrió un error al renderizar el árbol genealógico.</p>
+        <button onClick={() => window.location.reload()} className="btn-reload mt-4">
+          Recargar Página
+        </button>
+      </div>;
+    }
+    return this.props.children;
+  }
+}
 
 export function TreePage() {
   const navigate = useNavigate();
@@ -16,10 +45,28 @@ export function TreePage() {
 
   // Map style orientation to ReactFlow layout
   const layout = useMemo(() => {
-    if (!styleId) return 'horizontal';
-    const style = treeStyles.find((s) => s.id === styleId);
-    return style?.orientation === 'radial' ? 'horizontal' : style?.orientation || 'horizontal';
-  }, [styleId]);
+    try {
+      if (!styleId) return 'horizontal';
+      const style = treeStyles.find((s) => s.id === styleId);
+      if (!style) {
+        console.warn('[TreeStyle] Style not found, using default horizontal:', styleId);
+        return 'horizontal';
+      }
+      return style?.orientation === 'radial' ? 'horizontal' : style?.orientation || 'horizontal';
+    } catch (error) {
+      console.error('[TreeStyle] Error calculating layout:', error);
+      return 'horizontal';
+    }
+  }, [styleId, treeStyles]);  // Added treeStyles as dependency
+
+  // Debug: log when styleId changes
+  useEffect(() => {
+    try {
+      console.log('[TreePage] styleId changed:', styleId, 'layout:', layout);
+    } catch (error) {
+      console.error('[TreePage] Error en useEffect styleId:', error);
+    }
+  }, [styleId, layout]);
 
   const personsInTree = useMemo(() => {
     let filtered = activeTreeId
@@ -69,7 +116,8 @@ export function TreePage() {
   }
 
   return (
-    <div className="flex flex-col h-full gap-0 bg-slate-100">
+    <ErrorBoundary>
+      <div className="flex flex-col h-full gap-0 bg-slate-100">
       {/* Header with info */}
       <div className="px-4 py-4 border-b border-slate-200 dark:border-slate-700">
         <h2 className="text-2xl font-bold text-neutral-900 dark:text-white">
@@ -139,5 +187,6 @@ export function TreePage() {
         )}
       </div>
     </div>
+    </ErrorBoundary>
   );
 }

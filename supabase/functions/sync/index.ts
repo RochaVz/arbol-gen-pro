@@ -28,6 +28,19 @@ function json(body: unknown, status = 200) {
   });
 }
 
+// Helper functions for logging and error handling
+function logInfo(message: string, data?: any) {
+  console.log(`[Sync Function] ${message}`, data || '');
+}
+
+function logError(message: string, error: any) {
+  console.error(`[Sync Function ERROR] ${message}`, error);
+}
+
+function logWarning(message: string, data?: any) {
+  console.warn(`[Sync Function WARN] ${message}`, data || '');
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -107,9 +120,27 @@ Deno.serve(async (req) => {
       .is('deleted_at', null)
       .maybeSingle();
     const role = mem?.role;
-    if (!role || !['owner', 'admin', 'editor'].includes(role)) {
-      return json({ operationId, status: 'failed', errorCode: 'forbidden' }, 403);
+    if (!role) {
+      logWarning('No tree membership found', { userId, treeId, entityType, operationType });
+      return json({ 
+        operationId, 
+        status: 'failed', 
+        errorCode: 'no_membership',
+        detail: 'No tree membership record found. You may need to be invited to the tree or have proper permissions.'
+      }, 403);
     }
+
+    const allowedRoles = ['owner', 'admin', 'editor'];
+    if (!allowedRoles.includes(role)) {
+      logWarning('Insufficient permissions', { userId, treeId, role, allowedRoles });
+      return json({ 
+        operationId, 
+        status: 'failed', 
+        errorCode: 'insufficient_permissions',
+        detail: `Role '${role}' is not allowed. Allowed roles: ${allowedRoles.join(', ')}`
+      }, 403);
+    }
+    logInfo('Permission check passed', { userId, treeId, role });
   }
 
   const now = Date.now();
@@ -173,6 +204,7 @@ Deno.serve(async (req) => {
     }
   } else {
     if (current && current.deleted_at === null) {
+      logInfo('Version conflict on create operation', { operationId, entityType, entityId, serverVersion: current.server_version });
       return json({ operationId, status: 'conflict', conflictKind: 'version', serverVersion: current.server_version }, 409);
     }
   }
@@ -233,7 +265,33 @@ Deno.serve(async (req) => {
 
     return json({ operationId, status: 'applied', serverVersion: newServerVersion }, 200);
   } catch (e) {
-    return json({ operationId, status: 'failed', errorCode: 'server_error', detail: String(e?.message ?? e) }, 500);
+    const errorMessage = e instanceof Error ? e.message : String(e);
+    logError('Server error during operation', { error: errorMessage, operationId, entityType, entityId });
+    
+    // Insert error record for tracking
+    try {
+      await admin.from('processed_operations').insert({
+        operation_id: operationId,
+        user_id: userId,
+        entity_type: entityType,
+        entity_id: entityId,
+        operation_type: operationType,
+        result_status: 'failed',
+        result_server_version: null,
+        processed_at: now,
+        last_error: errorMessage,
+      });
+      logInfo('Error recorded in processed_operations', { operationId });
+    } catch (insertError) {
+      logError('Failed to record error', insertError);
+    }
+    
+    return json({ 
+      operationId, 
+      status: 'failed', 
+      errorCode: 'server_error', 
+      detail: errorMessage 
+    }, 500);
   }
 });
 

@@ -14,7 +14,14 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Base styles */
+/* Base styles - asegurar altura para React Flow */
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
 @layer base {
   body {
     @apply bg-slate-50 text-slate-900 antialiased;
