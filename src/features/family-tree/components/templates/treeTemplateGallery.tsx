@@ -103,49 +103,98 @@ export const treeStyles: TreeStyle[] = [
   },
 ];
 
+interface StyleGalleryItemProps {
+  isSelected: boolean;
+  onClick: () => void;
+  isLoading: boolean;
+  isHover: boolean;
+  id?: string;
+  name?: string;
+  description?: string;
+  icon?: string;
+  colorPrimary?: string;
+  colorSecondary?: string;
+  cardShape?: 'round' | 'square';
+  spacing?: 'compact' | 'normal' | 'wide';
+  orientation?: 'vertical' | 'horizontal' | 'radial';
+}
+
+/** StyleGalleryItem - Tarjeta individual de estilo con estados interactivos */
+const StyleGalleryItem: React.FC<StyleGalleryItemProps> = ({
+  isSelected,
+  onClick,
+  isLoading,
+  isHover,
+  name,
+  icon,
+  description,
+  colorPrimary
+}) => {
+  const classes = 'flex flex-col items-center gap-2 cursor-pointer select-none transition-all duration-200 ' +
+    (isLoading && 'pointer-events-none opacity-50') + ' ' +
+    (!isLoading && isHover && 'hover:shadow-lg hover:translate-y-1') + ' ' +
+    (isSelected && 'ring-2 ring-offset-2 ring-blue-500 shadow-xl') + ' ' +
+    'rounded-xl';
+
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => {}}
+      onMouseLeave={() => {}}
+      role="menuitemradio"
+      aria-checked={isSelected}
+      aria-label={isSelected ? `Estilo ${name} seleccionado` : `Seleccionar estilo ${name}`}
+      tabIndex={isSelected || !isLoading ? 0 : -1}
+      className={classes}
+    >
+      <div className="text-3xl mb-1">{icon}</div>
+      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{name}</div>
+      <div className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">{description}</div>
+      <div
+        className="mt-2 h-2 rounded-full w-4/5"
+        style={{ backgroundColor: colorPrimary, opacity: isSelected ? 1 : 0.3 }}
+      />
+    </button>
+  );
+};
+
+/** TreeTemplateGalleryProps - Props for the style gallery component */
 interface TreeTemplateGalleryProps {
   currentStyle: string;
   onStyleSelect: (styleId: string) => void;
+  isTransitioning?: boolean;
 }
 
+/** TreeTemplateGallery - Galería completa de estilos con transiciones suaves */
 export const TreeTemplateGallery: React.FC<TreeTemplateGalleryProps> = ({
   currentStyle,
   onStyleSelect,
+  isTransitioning = false,
 }) => {
+  const [isHover, setIsHover] = React.useState(false);
+
   return (
-    <div className="space-y-3">
-      <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+    <div
+      className="space-y-3"
+      onMouseEnter={() => setIsHover(true)}
+      onMouseLeave={() => setIsHover(false)}
+    >
+      <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
         🌳 Galería de Estilos
       </h3>
-      <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+      <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
         Elige un estilo para ver cómo se verá tu árbol
       </p>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {treeStyles.map((style) => (
-          <button
+          <StyleGalleryItem
             key={style.id}
+            {...style}
+            isSelected={currentStyle === style.id}
+            isLoading={isTransitioning}
             onClick={() => onStyleSelect(style.id)}
-            className={`relative rounded-xl p-3 text-left transition-all duration-200 ${
-              currentStyle === style.id
-                ? 'ring-2 ring-blue-500 shadow-lg'
-                : 'hover:shadow-md hover:-translate-y-0.5'
-            }`}
-          >
-            <div className="text-2xl mb-2">{style.icon}</div>
-            <div className="text-xs font-semibold text-gray-900 dark:text-gray-100">
-              {style.name}
-            </div>
-            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              {style.description}
-            </div>
-            <div
-              className="mt-2 h-2 rounded-full"
-              style={{
-                backgroundColor: style.colorPrimary,
-                opacity: currentStyle === style.id ? 1 : 0.3,
-              }}
-            />
-          </button>
+            isHover={isHover}
+          />
         ))}
       </div>
     </div>

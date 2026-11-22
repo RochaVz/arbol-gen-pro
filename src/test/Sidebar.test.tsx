@@ -16,6 +16,7 @@ describe('Sidebar mobile navigation', () => {
     fireEvent.click(within(menu).getByRole('button', { name: 'Árbol' }));
 
     expect(onClick).toHaveBeenCalledOnce();
+    // The sidebar should close after navigation click
     expect(container.querySelector('#mobile-sidebar')).toBeNull();
     expect(screen.getByRole('button', { name: 'Abrir menú' }).getAttribute('aria-expanded')).toBe('false');
   });

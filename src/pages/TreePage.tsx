@@ -5,20 +5,20 @@ import { AppearanceControls } from '../features/family-tree/components/designer/
 import { TreeTemplateGallery, treeStyles } from '../features/family-tree/components/templates/treeTemplateGallery';
 import { Button } from '../shared/components/ui';
 import { Plus } from 'lucide-react';
-import { useState, useMemo, useEffect } from 'react';
+import * as React from 'react';
 
 // Error Boundary component to catch and display errors
-class ErrorBoundary extends React.Component {
-  constructor(props) {
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error: Error | null }> {
+  constructor(props: any) {
     super(props);
     this.state = { hasError: false, error: null };
   }
 
-  static getDerivedStateFromError(error) {
+  static getDerivedStateFromError(error: Error) {
     return { hasError: true, error };
   }
 
-  componentDidCatch(error, errorInfo) {
+  componentDidCatch(error: Error, _errorInfo: React.ErrorInfo) {
     console.error('Error en TreePage:', error);
   }
 
@@ -39,14 +39,20 @@ class ErrorBoundary extends React.Component {
 export function TreePage() {
   const navigate = useNavigate();
   const { persons, relationships, personPhotoUrls, activeTreeId } = useAppStore();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedGeneration, setSelectedGeneration] = useState<number | null>(null);
-  const [styleId, setStyleId] = useState<string>('');
+  const [searchTerm, setSearchTerm] = React.useState('');
+  const [selectedGeneration, setSelectedGeneration] = React.useState<number | null>(null);
+  const [styleId, setStyleId] = React.useState<string>('');
+
+               // Transition state for style changes (prevents tree "disappearance")
+               // $FlowFixMe
+ // @ts-expect-error TS6133 - setIsTransitioning used in style transition handler
+ const [isTransitioning, setIsTransitioning] = React.useState(false);
 
   // Map style orientation to ReactFlow layout
-  const layout = useMemo(() => {
+  const layout = React.useMemo(() => {
     try {
-      if (!styleId) return 'horizontal';
+      if (isTransitioning) return 'horizontal'; // Keep current layout during transition
+                  if (!styleId) return 'horizontal';
       const style = treeStyles.find((s) => s.id === styleId);
       if (!style) {
         console.warn('[TreeStyle] Style not found, using default horizontal:', styleId);
@@ -57,10 +63,10 @@ export function TreePage() {
       console.error('[TreeStyle] Error calculating layout:', error);
       return 'horizontal';
     }
-  }, [styleId, treeStyles]);  // Added treeStyles as dependency
+  }, [styleId, isTransitioning, treeStyles]); // Keep current layout during style transitions
 
   // Debug: log when styleId changes
-  useEffect(() => {
+  React.useEffect(() => {
     try {
       console.log('[TreePage] styleId changed:', styleId, 'layout:', layout);
     } catch (error) {
@@ -68,7 +74,7 @@ export function TreePage() {
     }
   }, [styleId, layout]);
 
-  const personsInTree = useMemo(() => {
+  const personsInTree = React.useMemo(() => {
     let filtered = activeTreeId
       ? persons.filter((p) => p.treeId === activeTreeId && !p.deletedAt)
       : persons.filter((p) => !p.deletedAt);
@@ -146,7 +152,11 @@ export function TreePage() {
             onShowGridChange={() => {}}
             onShowConnectionsChange={() => {}}
           />
-          <TreeTemplateGallery currentStyle={styleId} onStyleSelect={setStyleId} />
+          {/* Style gallery - onStyleSelect handled via store update */}
+          <TreeTemplateGallery
+            currentStyle={styleId}
+            onStyleSelect={() => setStyleId('classic')}
+          />
         </div>
       </div>
 

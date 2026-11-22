@@ -1,7 +1,11 @@
-const nodeTypes = useMemo(() => ({
-    familyNode: FamilyNode,
-  }), [FamilyNode]);
+import React from 'react';
 
-  const edgeTypes = useMemo(() => ({
-    familyEdge: FamilyRelationship,
-  }), [FamilyRelationship]);
+interface ReactFlowTreeProps {
+  // Props can be added here if needed
+}
+
+const ReactFlowTree: React.FC<ReactFlowTreeProps> = () => {
+  return null;
+};
+
+export { ReactFlowTree };
