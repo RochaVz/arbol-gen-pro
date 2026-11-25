@@ -1,6 +1,8 @@
 # ROADMAP.md
 
-Plan de implementación verificable para ARBOL-GEN-PRO. Orden por complejidad: **persistencia local** primero, después sincronización remota, exactamente como exige `SYNC-ARCHITECTURE.md`.
+## ARBOL-GEN-PRO — Roadmap de Reingeniería Simplificada
+
+> **Basado en `ROADMAP-REINGENIERIA.md`**: el objetivo es simplificar al máximo la arquitectura, eliminar duplicación y dejar solo lo esencial para una app local-first pura.
 
 ## Notas de contexto (verificado sobre el repositorio)
 
@@ -19,32 +21,22 @@ Las soluciones mínimas de los cinco puntos anteriores se aplican en **Fase 0**.
 
 Para qué: una app offline-first para árbol genealógico familiar con Dexie + Supabase, sincronización por **operación**, control optimista de concurrencia y resolución manual de conflictos (ningún auto-merge silencioso), e idempotencia ante reintentos. El roadmap empieza donde el diseño lo exige: **persistencia local (Fase 2)**, no el backend.
 
-## Mapeo Requisito → Fase
+## Principios de Aplicación
 
-| RF | Función | Fase que lo entrega |
-|---|---|---|
-| RF-01 | Árboles (CRUD) | F5 |
-| RF-02 | Personas (CRUD + búsqueda) | F3 |
-| RF-03 | Relaciones familiares | F3 |
-| RF-04 | Profundidad generacional | F4 |
-| RF-05 | Fechas, lugares, biografías | F3 + F11 |
-| RF-06 | Fotografías | F9 |
-| RF-07 | Perfiles + búsqueda | F4 + F11 |
-| RF-09 | Compartir y permisos | F5 (RLS) + F6 |
-| RF-10 | Offline-first | F2, F3, F4 |
-| RF-11 | Sincronización y conflictos | F6, F7, F8 |
-| RF-12 | Idempotencia | F6 |
-| RF-13 | Estado de sincronización | F4 |
-| RF-14 | PWA instalable | F10 |
+> **La roadmap ahora refleja la reingeniería progresiva en 7 fases** (FASE 1 a FASE 7), priorizando la simplificación y la local-first antes de añadir complejidad de sincronización remota. Ver `ROADMAP-REINGENIERIA.md` para la visión completa.
 
-> **Nota de coherencia**: RF-09.2 enumera los roles `owner, admin, editor, viewer, commenter`, mientras que `SYNC-ARCHITECTURE.md` §17.1 asume `owner, editor, viewer`. El conjunto final de roles es la decisión funcional F3 (§4 de este documento) y debe cerrarse **antes** de implementar la Fase 5, porque de él dependen las políticas RLS.
+> **Fases aplicadas hasta la fecha**: FASE 1 (auditoría) y FASE 2 (datos simplificados) ya han sido reflejados en `DATA-MODEL.md`. FASE 3 (state management) está en proceso.
 
-## Reglas de ejecución
+## Reglas de ejecución (actualizadas por reingeniería)
 
-1. **Una fase termina o no existe.** Cada fase declara un criterio de aceptación comprobable con un comando. Si el comando falla, la fase no está terminada.
-2. **No se empieza la Fase N+1 con la N a medias.** El orden es una cadena: F2 → F3 → F5 → F6 → F7.
-3. **Ninguna fase rompe una anterior.** Si una fase posterior obliga a cambiar el modelo de datos, se revisa la Fase 1 y se documenta en `SYNC-ARCHITECTURE.md` §20 antes de continuar.
-4. **Cada fase deja el proyecto en verde**: `npm run lint`, `npm run build` y `npm run test` sin errores.
+> **Ahora sigue el orden FASE 1 → FASE 7** de `ROADMAP-REINGENIERIA.md`, no el orden F0-F11 anterior.
+
+1. **Cada fase de reingeniería declara un criterio de aceptación comprobable.** Si el criterio no se cumple (build/lint/tests fallan), la fase no está terminada.
+2. **No se empieza la FASE N+1 con la N a medias.** El orden es una cadena: FASE 1 → FASE 2 → FASE 3 → FASE 4 → FASE 5 → FASE 6 → FASE 7.
+3. **Ninguna fase posterior rompe una anterior.** Si una fase obliga a cambiar el modelo de datos (por ejemplo, FASE 2 simplifica el esquema), se documenta en `DATA-MODEL.md` y se revisa que las fases posteriores sean compatibles.
+4. **Cada fase deja el proyecto en verde** después de aplicada: `npm run lint`, `npm run build` y `npm run test` sin errores.
+
+> **Importante**: El orden F2 → F3 → F5 → F6 → F7 del roadmap original se ha reordenado a FASE 1 → FASE 2 → FASE 3 → FASE 4 → FASE 5 → FASE 6 → FASE 7 para reflejar la progresión de simplificación.
 
 ---
 

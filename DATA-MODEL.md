@@ -1,6 +1,8 @@
 # DATA-MODEL.md
 
-## Modelo de Datos - ARBOL-GEN-PRO
+## Modelo de Datos - ARBOL-GEN-PRO (Reingenerizado)
+
+> **Basado en la reingeniería FASE 2 de `ROADMAP-REINGENIERIA.md`**: esquema simplificado a 5 tablas máx, cada entidad con ≤7 campos base (sin campos de sync).
 
 Este documento define las entidades, sus relaciones, restricciones y el esquema de base de datos para IndexedDB (Dexie.js) y PostgreSQL (Supabase).
 
@@ -13,9 +15,7 @@ Este documento define las entidades, sus relaciones, restricciones y el esquema 
 ```typescript
 // shared/types/common.ts
 
-type SyncStatus = 'synced' | 'pending' | 'conflict' | 'error';
-
-type UUID = string;  // Formato UUID v7 (timestamp + random)
+type UUID = string;  // Formato UUID v7
 
 /**
  * Campos comunes a toda entidad sincronizable.
@@ -29,11 +29,6 @@ interface BaseEntity {
   id: UUID;
   createdAt: number;        // Informativo: reloj local, no ordena nada
   updatedAt: number;        // Informativo: reloj local, no ordena nada
-  serverVersion: number;    // Solo el servidor lo incrementa
-  localRevision: number;    // Solo el cliente lo incrementa
-  syncStatus: SyncStatus;   // Estado de la última escritura local
-  deletedAt: number | null; // Tombstone. null = la entidad existe
-  localOnly?: boolean;      // Creada solo en este dispositivo, nunca sube
 }
 
 interface Result<T, E = AppError> {
@@ -85,13 +80,12 @@ interface Place {
 
 ## Entidades
 
-### Tree (Árbol genealógico)
+### Tree (Árbol genealógico (simplificado))
 
 ```typescript
 interface Tree extends BaseEntity {
   name: string;
   description?: string;
-  ownerId: UUID;
 }
 ```
 
@@ -103,8 +97,6 @@ interface Tree extends BaseEntity {
  * de la ausencia de `deathDate`. Una persona de la que no se sabe si
  * falleció es 'unknown', no 'alive'.
  */
-type LifeStatus = 'alive' | 'deceased' | 'unknown';
-
 interface Person extends BaseEntity {
   treeId: UUID;
   firstName: string;
@@ -112,12 +104,11 @@ interface Person extends BaseEntity {
   sex?: 'male' | 'female' | 'other' | 'unknown';
   birthDate?: PartialDate;
   deathDate?: PartialDate;
-  lifeStatus: LifeStatus;
+  // lifeStatus ya no es un campo separado; se infiere de la presencia/ausencia de deathDate
   birthplace?: Place;
   deathPlace?: Place;
   biography?: string;
   notes?: string;
-  generation?: number;
 }
 ```
 
@@ -130,8 +121,7 @@ type RelationshipType =
   | 'sibling'
   | 'adoptive'
   | 'stepparent'
-  | 'guardian'
-  | 'partner';
+  | 'adoptive';
 
 interface Relationship extends BaseEntity {
   treeId: UUID;
@@ -139,16 +129,14 @@ interface Relationship extends BaseEntity {
   person2Id: UUID;
   type: RelationshipType;
   startDate?: PartialDate;
-  endDate?: PartialDate;
 }
 ```
 
-### Event (Evento de vida)
+### Event (Evento de vida (simplificado))
 
 ```typescript
 type EventType =
-  | 'birth' | 'baptism' | 'marriage' | 'death' | 'burial'
-  | 'education' | 'occupation' | 'military' | 'immigration' | 'other';
+  | 'birth' | 'baptism' | 'marriage' | 'death' | 'burial';
 
 interface Event extends BaseEntity {
   treeId: UUID;
@@ -157,28 +145,24 @@ interface Event extends BaseEntity {
   title?: string;
   date?: PartialDate;
   place?: Place;
-  description?: string;
 }
 ```
 
-### Photo (Fotografía)
+### Photo (Fotografía (simplificado))
 
 ```typescript
-type PhotoKind = 'original' | 'optimized' | 'thumbnail';
+type PhotoKind = 'optimized' | 'thumbnail';
 
 interface Photo extends BaseEntity {
   treeId: UUID;
   personId?: UUID;
   eventId?: UUID;
-  r2Key: string;          // Clave del ORIGINAL en R2 (bucket privado)
-  kind?: PhotoKind;       // Solo para blobs locales (photoBlobs)
+  kind?: PhotoKind;       // Para blobs locales (fotoOptimizada, fotoMiniatura)
   width: number;
   height: number;
   mimeType: string;
   sizeBytes: number;
   isPrimary: boolean;     // Retrato principal de la persona
-  capturedAt?: number;
-  exif?: Record<string, string | number>;
 }
 ```
 
@@ -192,25 +176,16 @@ Son **entidades distintas**. La invitación es temporal y lleva un token; la mem
  * `REQUIREMENTS.md` RF-09.2 enumera los cinco, mientras que
  * `SYNC-ARCHITECTURE.md` §17.1 asume `owner`, `editor` y `viewer`.
  */
-type TreeRole = 'owner' | 'admin' | 'editor' | 'viewer' | 'commenter';
-
-interface TreeMembership extends BaseEntity {
+interface TreeMembership {
   treeId: UUID;
   userId: UUID;
-  role: TreeRole;
-  invitedBy?: UUID;
-  acceptedAt?: number;
 }
 
-interface TreeInvitation extends BaseEntity {
+interface TreeInvitation {
   treeId: UUID;
   invitedEmail: string;
-  role: TreeRole;
-  tokenHash: string;      // Hash del token. El token en claro NUNCA se guarda
-  expiresAt: number;      // Caducidad
-  acceptedAt?: number;
-  acceptedBy?: UUID;
-  revokedAt?: number;
+  tokenHash: string;
+  expiresAt: number;
 }
 ```
 
@@ -230,11 +205,9 @@ type OperationStatus =
   | 'failed'      // Error permanente o intentos agotados. Se conserva
   | 'blocked';    // Conflicto (409) pendiente de decisión del usuario
 
-type EntityType =
-  | 'tree' | 'person' | 'relationship' | 'event' | 'photo'
-  | 'treeMembership' | 'treeInvitation';
+> **Principio FASE 4 de `ROADMAP-REINGENIERIA.md`**: simplicidad o eliminación de sincronización. Para el MVP, local-first puro.
 
-interface SyncOperation {
+No hay operación `SyncOperation` definida en el esquema base.
   operationId: UUID;                    // CLAVE PRIMARIA. Clave de idempotencia
   entityType: EntityType;
   entityId: UUID;
@@ -257,70 +230,49 @@ interface SyncOperation {
 
 ```mermaid
 erDiagram
-    TREE ||--o{ PERSON : contains
-    TREE ||--o{ RELATIONSHIP : has
-    TREE ||--o{ PHOTO : stores
-    TREE ||--o{ EVENT : contains
-    TREE ||--o{ TREEMEMBERSHIP : grants
-    TREE ||--o{ TREEINVITATION : invites
+    TREE ||--o{ PERSON : contains \
+    TREE ||--o{ RELATIONSHIP : has \
+    TREE ||--o{ PHOTO : stores \
+    TREE ||--o{ EVENT : contains \
 
-    PERSON ||--o{ RELATIONSHIP : person1
-    PERSON ||--o{ RELATIONSHIP : person2
-    PERSON ||--o{ PHOTO : portrait
-    PERSON ||--o{ EVENT : participant
+    PERSON ||--o{ RELATIONSHIP : person1 \
+    PERSON ||--o{ RELATIONSHIP : person2 \
+    PERSON ||--o{ PHOTO : portrait \
+    PERSON ||--o{ EVENT : participant \
 
     PHOTO }|--|| EVENT : event_photos
-
-    TREEMEMBERSHIP }|--|| USER : belongs
-    TREEINVITATION }|--|| USER : invited_by
 ```
 
-### Constraints de Negocio
+### Constraints de Negocio (simplificado)
 
 | Entidad | Constraint | Descripción |
 |---------|------------|-------------|
 | Person | `treeId` + `id` único | Una persona pertenece a un solo árbol |
-| Person | `lifeStatus = 'deceased'` exige `deathDate` | Nunca se infiere el estado de vida por la ausencia de fecha |
-| Person | `lifeStatus = 'alive'` prohíbe `deathDate` | Una persona viva no tiene fecha de fallecimiento |
 | Relationship | `person1Id` + `person2Id` distintos | No auto-relación |
 | Relationship | Tipo `parent-child` → `person1` es padre/madre | Dirección semántica |
-| Photo | `original.r2Key` único | No duplicados en R2 |
-| TreeMembership | `treeId` + `userId` único | Una membresía por usuario y árbol |
-| TreeInvitation | `treeId` + `invitedEmail` único | Una invitación pendiente por email |
-| TreeInvitation | `tokenHash` único y con `expiresAt` | El token en claro nunca se almacena |
-| SyncOperation | `operationId` (UUID v7) único | Idempotencia garantizada |
+| Photo | `treeId` + `id` único | Cada foto pertenece a un árbol |
 
 
-### Índices Recomendados (PostgreSQL / Dexie)
+### Índices Recomendados (PostgreSQL / Dexie - simplificado)
 
 ```sql
 -- PostgreSQL (Supabase)
 CREATE INDEX idx_person_tree_id ON person(tree_id);
 CREATE INDEX idx_person_name ON person USING gin(to_tsvector('spanish', first_name || ' ' || last_name));
-CREATE INDEX idx_person_life_status ON person(life_status);
 CREATE INDEX idx_relationship_tree ON relationship(tree_id);
 CREATE INDEX idx_relationship_persons ON relationship(person1_id, person2_id);
 CREATE INDEX idx_photo_tree ON photo(tree_id);
 CREATE INDEX idx_photo_person ON photo(person_id);
 CREATE INDEX idx_event_tree ON event(tree_id);
-CREATE INDEX idx_tree_membership_tree ON tree_membership(tree_id);
-CREATE INDEX idx_tree_membership_user ON tree_membership(user_id);
-CREATE INDEX idx_tree_invitation_tree ON tree_invitation(tree_id);
-CREATE INDEX idx_tree_invitation_token_hash ON tree_invitation(token_hash);
-
--- Registro de operaciones ya procesadas (servidor).
--- NO es la cola local: aquí solo se guardan las operaciones YA aplicadas,
--- para poder responder 'alreadyProcessed' ante un reintento.
-CREATE INDEX idx_sync_operation_user ON sync_operation(user_id);
-CREATE INDEX idx_sync_operation_entity ON sync_operation(entity_type, entity_id);
-CREATE INDEX idx_sync_operation_processed ON sync_operation(processed_at);
 
 -- Dexie.js (IndexedDB) - definido en stores
 ```
 
 ---
 
-## Esquema Dexie.js (IndexedDB)
+## Esquema Dexie.js (IndexedDB - simplificado)
+
+> **Basado en la reingeniería FASE 2**: esquema reducido a 5 tablas máx, sin campos de sync (`serverVersion`, `syncStatus`, `deletedAt`, `localRevision`).
 
 ```typescript
 // core/db/schema.ts
@@ -329,17 +281,13 @@ import { Dexie, type Table } from 'dexie';
 export const db = new Dexie('arbol-gen-pro');
 
 db.version(1).stores({
-  trees: 'id, name, ownerId, createdAt, updatedAt, serverVersion, syncStatus, deletedAt',
-  persons: 'id, treeId, firstName, lastName, lifeStatus, createdAt, updatedAt, serverVersion, syncStatus, deletedAt',
-  relationships: 'id, treeId, person1Id, person2Id, type, createdAt, updatedAt, serverVersion, syncStatus, deletedAt',
-  events: 'id, treeId, type, createdAt, updatedAt, serverVersion, syncStatus, deletedAt',
-  photos: 'id, treeId, personId, eventId, r2Key, createdAt, updatedAt, serverVersion, syncStatus, deletedAt',
-  treeMemberships: 'id, treeId, userId, role, createdAt, updatedAt, serverVersion, syncStatus',
-  treeInvitations: 'id, treeId, invitedEmail, tokenHash, expiresAt, createdAt, updatedAt',
-  // Cola local de operaciones. Clave primaria: operationId.
-  syncOutbox: 'operationId, status, [entityType+entityId], createdAt',
-  // Blobs de fotos locales (miniaturas, optimizadas). El original vive en R2.
-  photoBlobs: 'id, photoId, kind',
+  trees: 'id, name, createdAt, updatedAt',
+  persons: 'id, treeId, firstName, lastName, birthDate, deathDate, createdAt, updatedAt',
+  relationships: 'id, treeId, person1Id, person2Id, type, createdAt, updatedAt',
+  events: 'id, treeId, type, createdAt, updatedAt',
+  photos: 'id, treeId, personId, eventId, kind, createdAt, updatedAt',
+  // Ya no hay treeMemberships, treeInvitations, syncOutbox, photoBlobs
+  // Sincronización: local-first puro, no cola de operaciones compleja
 });
 ```
 
@@ -351,51 +299,23 @@ db.version(1).stores({
 
 | Versión | Cambios |
 |---------|---------|
-| 1 | Esquema inicial (trees, persons, relationships, events, photos, treeMemberships, treeInvitations, syncOutbox, photoBlobs) |
-| 2 | *Futuro, condicionado a `SYNC-ARCHITECTURE.md` §3.3*: añadir `vectorClock` a `syncOutbox`. **No forma parte del MVP** (ver "Vector clocks" más abajo) |
-| 3 | *Futuro*: añadir `branchRestriction` a `treeMemberships` |
-
-### Vector clocks
-
-Los vector clocks **no se implementan en el MVP**. El control de concurrencia usa control optimista con `serverVersion` verificado por el servidor. La decisión, sus criterios de reevaluación y la ruta de migración están en `SYNC-ARCHITECTURE.md` §3.
+| 1 | Esquema inicial simplificado (trees, persons, relationships, events, photos) |
+| 2 | *Futuro*: posible añadir `branchRestriction` a `trees` (si es necesario) |
 
 ---
 
-## Versionado y Control de Concurrencia
+## Versionado y Control de Concurrencia (simplificado)
 
-Cada entidad tiene:
+> **Principio FASE 2 de `ROADMAP-REINGENIERIA.md`**: Datos simples. Eliminar versionado, sincronización de operaciones, conflictos y tombstones. Solo `createdAt` / `updatedAt`.
 
-- **serverVersion**: entero monotónico que **solo incrementa el servidor**. Es el valor contra el que se decide el control de concurrencia.
-- **localRevision**: contador que **solo incrementa el cliente** en cada escritura local. Distingue escrituras sucesivas sobre la misma entidad dentro de un mismo dispositivo. Nunca se usa como criterio de conflicto.
-- **syncStatus**: rastrea el estado de la última escritura local (`synced` / `pending` / `conflict` / `error`).
-- **deletedAt**: marca de borrado lógico (tombstone). `null` significa que la entidad existe.
+Para el MVP local-first, **no hay versionado ni control de concurrencia en el esquema Dexie**. El control de concurrencia se delega al servidor cuando haya sincronización remota, pero para la operación offline:
 
-La cola local añade:
+- `localRevision`: contador opcional que el cliente puede usar internamente para detectar escrituras locales encadenadas, **no** se persiste en el esquema base.
+- `serverVersion`: **no** forma parte del esquema Dexie del MVP. Se añadiría solo si se conecta con Supabase.
+- `syncStatus`: **no** forma parte del esquema Dexie del MVP. La app funciona completamente offline.
+- `deletedAt`: **no** forma parte del esquema Dexie del MVP. El borrado lógico no es necesario cuando los datos se quedan en el dispositivo.
 
-- **operationId**: identificador global y único de la operación. Es la clave de idempotencia.
-- **baseServerVersion**: copia del `serverVersion` que el cliente creyó vigente al encolar la operación. Es la base de la comparación contra el servidor.
-- **dependsOn**: `operationId`s que deben confirmarse antes que esta operación.
-
-**Reglas:**
-
-1. El cliente **nunca** incrementa `serverVersion`. Solo lo actualiza cuando el servidor confirma una operación (`applied` o `alreadyProcessed`).
-2. El servidor **nunca** escribe `localRevision`.
-3. Nunca se sobrescribe una entidad si `baseServerVersion` ≠ `serverVersion` del servidor, sin resolución explícita del conflicto.
-4. El borrado es **lógico**: se establece `deletedAt` y se conserva la entidad hasta la purga (§13.5 de `SYNC-ARCHITECTURE.md`).
-
-### Nombres canónicos
-
-Estos cinco campos tienen **un único nombre y un único dueño** en todo el proyecto:
-
-| Campo | Dónde vive | Quién lo modifica | Qué representa |
-|-------|-----------|-------------------|----------------|
-| `serverVersion` | Entidad | Solo el servidor | Versión autoritativa del registro. Base del control de concurrencia. |
-| `localRevision` | Entidad | Solo el cliente | Contador local de escrituras sobre la misma entidad. |
-| `syncStatus` | Entidad | Solo el cliente | Estado de la última escritura local de esa entidad. |
-| `operationId` | Operación (`syncOutbox`) | Solo el cliente | Identidad global de la operación. Clave de idempotencia. |
-| `dependsOn` | Operación (`syncOutbox`) | Solo el cliente | Operaciones que deben confirmarse antes que esta. |
-
-> `syncStatus` (entidad) y `status` (operación) son cosas distintas: el primero describe la última escritura local de una entidad; el segundo, el estado de sincronización de una operación. No deben confundirse.
+> **Ya no hay "Nombres canónicos"** sincronizados entre `DATA-MODEL.md` y `SYNC-ARCHITECTURE.md` para el MVP: el esquema es simple y no requiere campos de sincronización.
 
 ---
 

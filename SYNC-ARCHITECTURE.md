@@ -1,12 +1,10 @@
 # SYNC-ARCHITECTURE.md
 
-## Sincronización Offline-First
+## Sincronización Offline-First (Simplificada - MVP)
 
-Este documento define el mecanismo por el cual Arbol Gen Pro guarda los cambios en el dispositivo, los persiste en una cola local y los propaga a Supabase cuando hay conectividad, resolviendo conflictos de forma explícita y sin sobrescribir silenciosamente el trabajo de otro usuario.
+> **Basado en la reingeniería FASE 4 de `ROADMAP-REINGENIERIA.md`**: sincronización simplificada o ausente para el MVP. Local-first puro. La aplicación funciona completamente offline sin dependencias.
 
-**Estado del documento**: arquitectura de diseño. Ninguna pieza descrita aquí está implementada todavía en el código del repositorio.
-
-**Documentos relacionados**: `DATA-MODEL.md` (entidades y esquema), `ARCHITECTURE.md` (capas), `REQUIREMENTS.md` (RF-10, RF-11, RF-12, RF-13), `AI-CONTEXT.md` (reglas obligatorias).
+> **Principio FASE 4**: simplicidad o eliminación de sincronización. Para el MVP, local-first puro.
 
 ---
 
@@ -25,17 +23,14 @@ Este documento define el mecanismo por el cual Arbol Gen Pro guarda los cambios 
 | # | Principio | Consecuencia práctica |
 |---|-----------|------------------------|
 | P1 | **El dispositivo es la fuente de verdad de la sesión** | Toda mutación pasa primero por IndexedDB; la UI nunca espera a la red. |
-| P2 | **Persistencia antes de efecto visual** | El cambio se confirma en IndexedDB y *después* se actualiza la UI. Si la escritura local falla, la UI no cambia. |
-| P3 | **La sincronización es un proceso, no un evento de UI** | El motor no depende de React; se activa por conectividad, arranque, foco recuperado y acción manual. |
-| P4 | **Toda operación es idempotente** | Reintentar la misma operación nunca duplica datos ni aplica dos veces una mutación. |
-| P5 | **El servidor es la autoridad de versión** | El control de concurrencia se decide contra la versión en PostgreSQL, nunca contra un contador local. |
-| P6 | **Nunca se sobrescribe trabajo ajeno en silencio** | Un conflicto bloquea la operación y exige una decisión del usuario. |
-| P7 | **Nada se borra sin confirmación del servidor** | Una eliminación local permanece pendiente hasta que el servidor la confirma. |
-| P8 | **Background Sync es una optimización, no un requisito** | La sincronización funciona sin Background Sync. |
-| P9 | **Sin credenciales de R2 ni de Supabase en el navegador** | El cliente pide autorización de acceso a un servidor de confianza. |
-| P10 | **El servidor valida todo** | Identidad, rol, árbol afectado y versión se comprueban en el servidor; el cliente no es una fuente de autoridad. |
+| P2 | **Persistencia antes de efecto visual** | El cambio se confirma en IndexedDB y *después* se actualiza la UI. |
+| P3 | **La sincronización es opcional para el MVP** | La app funciona 100% offline sin configuración de Supabase. |
+| P4 | **Sincronización simple o ausente** | Para el MVP, local-first puro. Sin motor de sync complejo. |
+| P5 | **UI ligera** | Sin `framer-motion` crítico en el flujo de sync. Usar CSS transitions nativas de Tailwind. |
+| P6 | **Menos dependencias** | Eliminar lo que no se use activamente (ver FASE 5 de `ROADMAP-REINGENIERIA.md`). |
+> La app funciona completamente offline. La sincronización remota es una capa opcional que se puede añadir después como mejora (FASE 5 en adelante de `ROADMAP-REINGENIERIA.md`).
 
-> Nota sobre el modelo de UI: la aplicación muestra de inmediato el cambio local (optimistic UI) pero **después** de que la escritura en IndexedDB haya confirmado. No es un "optimistic UI" que aplica y luego revierte: si IndexedDB falla, el usuario ve un error y la interfaz no refleja el cambio.
+> **Nota importante para el MVP**: La app funciona completamente offline. Los cambios se guardan en IndexedDB y se pueden exportar/importar JSON manualmente desde SettingsPage. La sincronización remota es opcional y se añade en fases posteriores (FASE 5 en adelante de `ROADMAP-REINGENIERIA.md`). No hay motor `SyncEngine`, no hay `syncOutbox` complejo, y no se requieren credenciales de R2 ni Supabase en el navegador.
 
 ---
 

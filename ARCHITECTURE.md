@@ -2,7 +2,7 @@
 
 ## Visión General
 
-ARBOL-GEN-PRO es una aplicación de árbol genealógico colaborativa construida con React, TypeScript y Vite, diseñada para funcionar completamente offline-first y ser instalable como PWA.
+ARBOL-GEN-PRO es una aplicación de árbol genealógico familiar construida con React, TypeScript y Vite, diseñada para funcionar completamente offline-first (local-first) y ser instalable como PWA.
 
 ### Arquitectura de Capas
 
@@ -44,14 +44,14 @@ Gestiona registros de personas:
 - Relaciones (padres, hijos, pareja)
 - Biografías y notas
 
-### 3. Sync Engine (`src/core/sync/SyncEngine`)
+> **Para el MVP**: No hay motor de sincronización complejo. La persistencia se realiza directamente en IndexedDB.
 Motor central de sincronización:
 - Cola de operaciones pendientes (IndexedDB)
 - Procesamiento asíncrono con retries
 - Resolución de conflictos (optimistic locking)
 - Sincronización con Supabase (PostgreSQL + RLS)
 
-### 4. Storage Strategy (`src/core/storage/DexieStore`)
+> **Para el MVP**: Datos locales simples en IndexedDB sin esquemas versionados ni migraciones complejas.
 Gestión de datos locales:
 - IndexedDB con Dexie.js
 - Esquemas versionados
@@ -74,17 +74,15 @@ type Result<T, E = Error> =
   | { ok: false; error: E };
 ```
 
-### Entity Pattern
+### Entity Pattern (Simplificado - FASE 2 de `ROADMAP-REINGENIERIA.md`)
+
+> **Datos simples**: eliminar versionado, sincronización de operaciones, conflictos y tombstones. Solo `id`, `createdAt`, `updatedAt`.
+
 ```typescript
 interface BaseEntity {
   id: string;              // UUID v7
   createdAt: number;
   updatedAt: number;
-  serverVersion: number;   // Solo el servidor lo incrementa
-  localRevision: number;   // Solo el cliente lo incrementa
-  syncStatus: 'synced' | 'pending' | 'conflict' | 'error';
-  deletedAt: number | null; // Tombstone. null = la entidad existe
-  localOnly?: boolean;
 }
 ```
 
