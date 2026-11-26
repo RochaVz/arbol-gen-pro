@@ -9,7 +9,7 @@ import {
   photoRepository,
 } from './core/db';
 import { getPhotoBlobs } from './features/photo/services/photoStorage';
-import { db } from './core/db';
+import { db } from './core/sync';
 
 interface AppState {
   cleanAll: () => void;

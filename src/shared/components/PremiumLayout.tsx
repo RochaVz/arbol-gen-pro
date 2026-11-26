@@ -108,7 +108,7 @@ const PremiumLayoutInner: React.FC<PremiumLayoutProps> = ({ children, onLogout, 
         <main
           key={currentPath}
           className="transition-opacity duration-200"
-          style={{ opacity: 0 }}
+          style={{ opacity: 1 }}
         >
           <PageContainer>{children}</PageContainer>
         </main>
@@ -120,7 +120,7 @@ const PremiumLayoutInner: React.FC<PremiumLayoutProps> = ({ children, onLogout, 
         <main
           key={currentPath + '-mobile'}
           className="transition-opacity duration-200"
-          style={{ opacity: 0 }}
+          style={{ opacity: 1 }}
         >
           <PageContainer>{children}</PageContainer>
         </main>
