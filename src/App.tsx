@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { supabase } from './core/supabase';
-import { startRealtimeSync, stopRealtimeSync } from './core/sync/realtime';
 import { useAppStore } from './store';
 import { useToastStore } from './shared/hooks/useToast';
 import { PremiumLayout } from './shared/components/PremiumLayout';
@@ -25,12 +24,6 @@ function AppShell() {
     const stored = localStorage.getItem('color-mode');
     const system = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     if ((stored ?? system) === 'dark') document.documentElement.classList.add('dark');
-  }, []);
-
-  // Realtime sync
-  useEffect(() => {
-    startRealtimeSync();
-    return () => stopRealtimeSync();
   }, []);
 
   // Auth listener

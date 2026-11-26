@@ -1,0 +1,12 @@
+
+> arbol-gen-pro@0.0.0 test
+> vitest run --passWithNoTests
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv5.0.5 [39m[90mC:/Users/eduardo/arbol-gen-pro[39m
+
+No test files found, exiting with code 0
+
+include: src/**/*.{test,spec}.{ts,tsx}
+exclude:  node_modules/**, dist/**, .git/**
+

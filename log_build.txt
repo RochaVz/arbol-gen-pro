@@ -1,0 +1,5 @@
+
+> arbol-gen-pro@0.0.0 build
+> tsc -b && vite build
+
+error TS18003: No inputs were found in config file 'C:/Users/eduardo/arbol-gen-pro/tsconfig.app.json'. Specified 'include' paths were '["src"]' and 'exclude' paths were '[]'.
