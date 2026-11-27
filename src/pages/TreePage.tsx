@@ -4,6 +4,7 @@ import { ReactFlowTree } from '../shared/components/ReactFlowTree';
 import { AppearanceControls } from '../features/family-tree/components/designer/appearanceControls';
 import { TreeTemplateGallery, treeStyles } from '../features/family-tree/components/templates/treeTemplateGallery';
 import { Button } from '../shared/components/ui';
+import { useToast } from '../shared/hooks/useToast';
 import { Plus } from 'lucide-react';
 import * as React from 'react';
 
@@ -38,41 +39,104 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
 
 export function TreePage() {
   const navigate = useNavigate();
+  const { addToast } = useToast();
   const { persons, relationships, personPhotoUrls, activeTreeId } = useAppStore();
   const [searchTerm, setSearchTerm] = React.useState('');
   const [selectedGeneration, setSelectedGeneration] = React.useState<number | null>(null);
-  const [styleId, setStyleId] = React.useState<string>('');
+  const [draftStyleId, setDraftStyleId] = React.useState('classic');
+  const [appliedStyleId, setAppliedStyleId] = React.useState('classic');
+  const [showPhotos, setShowPhotos] = React.useState(true);
+  const [showDates, setShowDates] = React.useState(true);
+  const [showRelationships, setShowRelationships] = React.useState(true);
+  const [showLabels, setShowLabels] = React.useState(true);
+  const [showGrid, setShowGrid] = React.useState(false);
+  const [showConnections, setShowConnections] = React.useState(true);
 
-               // Transition state for style changes (prevents tree "disappearance")
-               // $FlowFixMe
- // @ts-expect-error TS6133 - setIsTransitioning used in style transition handler
- const [isTransitioning, setIsTransitioning] = React.useState(false);
-
-  // Map style orientation to ReactFlow layout
-  const layout = React.useMemo(() => {
-    try {
-      if (isTransitioning) return 'horizontal'; // Keep current layout during transition
-                  if (!styleId) return 'horizontal';
-      const style = treeStyles.find((s) => s.id === styleId);
-      if (!style) {
-        console.warn('[TreeStyle] Style not found, using default horizontal:', styleId);
-        return 'horizontal';
-      }
-      return style?.orientation === 'radial' ? 'horizontal' : style?.orientation || 'horizontal';
-    } catch (error) {
-      console.error('[TreeStyle] Error calculating layout:', error);
-      return 'horizontal';
-    }
-  }, [styleId, isTransitioning, treeStyles]); // Keep current layout during style transitions
-
-  // Debug: log when styleId changes
   React.useEffect(() => {
-    try {
-      console.log('[TreePage] styleId changed:', styleId, 'layout:', layout);
-    } catch (error) {
-      console.error('[TreePage] Error en useEffect styleId:', error);
+    if (!activeTreeId) {
+      setDraftStyleId('classic');
+      setAppliedStyleId('classic');
+      setShowPhotos(true);
+      setShowDates(true);
+      setShowRelationships(true);
+      setShowLabels(true);
+      setShowGrid(false);
+      setShowConnections(true);
+      return;
     }
-  }, [styleId, layout]);
+    try {
+      const saved = localStorage.getItem(`tree-style:${activeTreeId}`);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (typeof parsed.styleId === 'string') {
+          setDraftStyleId(parsed.styleId);
+          setAppliedStyleId(parsed.styleId);
+        }
+        setShowPhotos(parsed.showPhotos !== false);
+        setShowDates(parsed.showDates !== false);
+        setShowRelationships(parsed.showRelationships !== false);
+        setShowLabels(parsed.showLabels !== false);
+        setShowGrid(parsed.showGrid === true);
+        setShowConnections(parsed.showConnections !== false);
+      } else {
+        setDraftStyleId('classic');
+        setAppliedStyleId('classic');
+        setShowPhotos(true);
+        setShowDates(true);
+        setShowRelationships(true);
+        setShowLabels(true);
+        setShowGrid(false);
+        setShowConnections(true);
+      }
+    } catch (error) {
+      console.error('[TreePage] No se pudo cargar el estilo guardado:', error);
+    }
+  }, [activeTreeId]);
+
+  const appliedStyle = React.useMemo(
+    () => treeStyles.find((style) => style.id === appliedStyleId) ?? treeStyles[0],
+    [appliedStyleId]
+  );
+  const handleApplyStyle = () => {
+    if (!activeTreeId) {
+      addToast('Selecciona un árbol activo antes de aplicar el estilo.', 'error');
+      return;
+    }
+    setAppliedStyleId(draftStyleId);
+    localStorage.setItem(`tree-style:${activeTreeId}`, JSON.stringify({
+      styleId: draftStyleId,
+      showPhotos,
+      showDates,
+      showRelationships,
+      showLabels,
+      showGrid,
+      showConnections,
+    }));
+    addToast('Estilo aplicado al árbol.', 'success');
+  };
+
+  const handleRestoreStyle = () => {
+    setDraftStyleId('classic');
+    setAppliedStyleId('classic');
+    setShowPhotos(true);
+    setShowDates(true);
+    setShowRelationships(true);
+    setShowLabels(true);
+    setShowGrid(false);
+    setShowConnections(true);
+    if (activeTreeId) {
+      localStorage.setItem(`tree-style:${activeTreeId}`, JSON.stringify({
+        styleId: 'classic',
+        showPhotos: true,
+        showDates: true,
+        showRelationships: true,
+        showLabels: true,
+        showGrid: false,
+        showConnections: true,
+      }));
+    }
+    addToast('Estilo restaurado.', 'success');
+  };
 
   const personsInTree = React.useMemo(() => {
     let filtered = activeTreeId
@@ -123,7 +187,7 @@ export function TreePage() {
 
   return (
     <ErrorBoundary>
-      <div className="flex flex-col h-full gap-0 bg-slate-100">
+      <div className="flex flex-col h-[calc(100vh-14rem)] min-h-[520px] gap-0 bg-slate-100">
       {/* Header with info */}
       <div className="px-4 py-4 border-b border-slate-200 dark:border-slate-700">
         <h2 className="text-2xl font-bold text-neutral-900 dark:text-white">
@@ -139,29 +203,40 @@ export function TreePage() {
       <div className="px-4 py-2 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-sm">
         <div className="flex items-center gap-2">
           <AppearanceControls
-            showPhotos={true}
-            showDates={true}
-            showRelationships={true}
-            showLabels={true}
-            showGrid={false}
-            showConnections={true}
-            onShowPhotosChange={() => {}}
-            onShowDatesChange={() => {}}
-            onShowRelationshipsChange={() => {}}
-            onShowLabelsChange={() => {}}
-            onShowGridChange={() => {}}
-            onShowConnectionsChange={() => {}}
+            showPhotos={showPhotos}
+            showDates={showDates}
+            showRelationships={showRelationships}
+            showLabels={showLabels}
+            showGrid={showGrid}
+            showConnections={showConnections}
+            onShowPhotosChange={setShowPhotos}
+            onShowDatesChange={setShowDates}
+            onShowRelationshipsChange={setShowRelationships}
+            onShowLabelsChange={setShowLabels}
+            onShowGridChange={setShowGrid}
+            onShowConnectionsChange={setShowConnections}
           />
-          {/* Style gallery - onStyleSelect handled via store update */}
           <TreeTemplateGallery
-            currentStyle={styleId}
-            onStyleSelect={() => setStyleId('classic')}
+            currentStyle={draftStyleId}
+            onStyleSelect={setDraftStyleId}
           />
+          <div className="ml-auto flex shrink-0 flex-col gap-2">
+            <Button
+              onClick={handleApplyStyle}
+              variant="primary"
+              disabled={!activeTreeId}
+            >
+              Aplicar estilo
+            </Button>
+            <Button onClick={handleRestoreStyle} variant="secondary">
+              Restaurar
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* Tree visualization - flexed to fill remaining space */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 min-h-[420px] overflow-hidden">
         {personsInTree.length === 0 ? (
           <div className="w-full h-full flex items-center justify-center bg-slate-50 dark:bg-slate-900">
             <div className="text-center">
@@ -177,7 +252,7 @@ export function TreePage() {
                     setSelectedGeneration(null);
                   }}
                   variant="primary"
-                  size="sm"
+                  size="lg"
                 >
                   Limpiar filtros
                 </Button>
@@ -191,7 +266,14 @@ export function TreePage() {
             photos={personPhotoUrls}
             treeCenterId={treeCenterId}
             onNodeClick={(personId) => navigate(`/person/${personId}`)}
-            layout={layout}
+            layout={appliedStyle.orientation === 'radial' ? 'horizontal' : appliedStyle.orientation}
+            visualStyle={appliedStyle}
+            showPhotos={showPhotos}
+            showDates={showDates}
+            showLabels={showLabels}
+            showRelationships={showRelationships}
+            showGrid={showGrid}
+            showConnections={showConnections}
             className="rounded-none"
           />
         )}

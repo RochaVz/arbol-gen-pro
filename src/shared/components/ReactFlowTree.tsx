@@ -18,6 +18,7 @@ import { FamilyRelationship } from './edges/FamilyRelationship';
 import { cn } from '../utils/cn';
 import { computeLayout } from '../../features/tree/utils/treeLayout';
 import { ErrorBoundary } from './ErrorBoundary';
+import type { TreeStyle } from '../../features/family-tree/components/templates/treeTemplateGallery';
 
 interface ReactFlowTreeProps {
   persons: Person[];
@@ -28,6 +29,13 @@ interface ReactFlowTreeProps {
   className?: string;
   onSearchTermChange?: (term: string) => void;
   layout?: 'horizontal' | 'vertical';
+  visualStyle?: TreeStyle;
+  showPhotos?: boolean;
+  showDates?: boolean;
+  showLabels?: boolean;
+  showRelationships?: boolean;
+  showGrid?: boolean;
+  showConnections?: boolean;
 }
 
 interface FamilyNodeData {
@@ -37,7 +45,19 @@ interface FamilyNodeData {
   isAlive: boolean;
   isTreeCenter: boolean;
   generation?: number;
+  showPhotos: boolean;
+  showDates: boolean;
+  showLabels: boolean;
+  visualStyle?: TreeStyle;
 }
+
+const NODE_TYPES = {
+  familyNode: FamilyNode,
+};
+
+const EDGE_TYPES = {
+  familyEdge: FamilyRelationship,
+};
 
 const EMPTY_PHOTOS: Record<string, string> = {};
 
@@ -100,6 +120,13 @@ const ReactFlowTreeContent: React.FC<ReactFlowTreeProps> = ({
   onNodeClick,
   className,
   layout: _layout = 'horizontal',
+  visualStyle,
+  showPhotos = true,
+  showDates = true,
+  showLabels = true,
+  showRelationships = true,
+  showGrid = false,
+  showConnections = true,
 }) => {
   // Safely generate nodes from persons with error handling
   const initialNodes: Node<FamilyNodeData>[] = useMemo(() => {
@@ -140,10 +167,42 @@ const ReactFlowTreeContent: React.FC<ReactFlowTreeProps> = ({
       // Safely compute layout
       let posMap: Map<string, { x: number; y: number }> | null = null;
       try {
-        if (centerId && relationships.length > 0) {
+        if (centerId) {
           const res = computeLayout(centerId, 3, 'branch', relationships);
           if (res?.pos && res.pos instanceof Map) {
             posMap = res.pos;
+            if (visualStyle?.orientation === 'horizontal') {
+              const horizontal = new Map<string, { x: number; y: number }>();
+              for (const [id, point] of posMap) {
+                horizontal.set(id, { x: point.y, y: point.x });
+              }
+              posMap = horizontal;
+            } else if (visualStyle?.orientation === 'radial') {
+              const radial = new Map<string, { x: number; y: number }>();
+              const ids = persons.map((person) => person.id);
+              const centerIndex = ids.indexOf(centerId);
+              if (centerIndex >= 0) radial.set(centerId, { x: 0, y: 0 });
+              const others = ids.filter((id) => id !== centerId);
+              const spacingScale = visualStyle.spacing === 'compact' ? 0.85 : visualStyle.spacing === 'wide' ? 1.25 : 1;
+              others.forEach((id, index) => {
+                const angle = (Math.PI * 2 * index) / Math.max(others.length, 1);
+                const radius = 360 * spacingScale;
+                radial.set(id, {
+                  x: Math.cos(angle) * radius,
+                  y: Math.sin(angle) * radius,
+                });
+              });
+              posMap = radial;
+            }
+
+            if (visualStyle?.spacing && visualStyle.orientation !== 'radial') {
+              const scale = visualStyle.spacing === 'compact' ? 0.85 : visualStyle.spacing === 'wide' ? 1.25 : 1;
+              const scaled = new Map<string, { x: number; y: number }>();
+              for (const [id, point] of posMap) {
+                scaled.set(id, { x: point.x * scale, y: point.y * scale });
+              }
+              posMap = scaled;
+            }
           }
         }
       } catch (error) {
@@ -153,6 +212,16 @@ const ReactFlowTreeContent: React.FC<ReactFlowTreeProps> = ({
           relationshipsCount: relationships.length,
         });
         posMap = null;
+      }
+
+      if (!posMap) {
+        posMap = new Map();
+        persons.forEach((person, index) => {
+          posMap?.set(person.id, {
+            x: (index % 5) * 280 + 95,
+            y: Math.floor(index / 5) * 350 + 75,
+          });
+        });
       }
 
       // Safely map persons to nodes
@@ -209,6 +278,10 @@ const ReactFlowTreeContent: React.FC<ReactFlowTreeProps> = ({
                 isAlive,
                 isTreeCenter,
                 generation,
+                showPhotos,
+                showDates,
+                showLabels,
+                visualStyle,
               },
               position,
               type: 'familyNode' as const,
@@ -239,11 +312,12 @@ const ReactFlowTreeContent: React.FC<ReactFlowTreeProps> = ({
       });
       return [];
     }
-  }, [persons, treeCenterId, photos, relationships]);
+  }, [persons, treeCenterId, photos, relationships, visualStyle, showPhotos, showDates, showLabels]);
 
   // Safely generate edges from relationships with error handling
   const initialEdges: Edge[] = useMemo(() => {
     try {
+      if (!showConnections) return [];
       // Validate input
       if (!Array.isArray(relationships) || relationships.length === 0) {
         return [];
@@ -286,6 +360,7 @@ const ReactFlowTreeContent: React.FC<ReactFlowTreeProps> = ({
               type: 'familyEdge' as const,
               data: {
                 relationType: rel.type || 'unknown',
+                showRelationships,
               },
               animated: false,
             };
@@ -313,7 +388,7 @@ const ReactFlowTreeContent: React.FC<ReactFlowTreeProps> = ({
       });
       return [];
     }
-  }, [persons, relationships]);
+  }, [persons, relationships, showConnections, showRelationships]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -327,14 +402,6 @@ const ReactFlowTreeContent: React.FC<ReactFlowTreeProps> = ({
   }, [initialEdges, setEdges]);
 
   const { fitView } = useReactFlow();
-
-  const nodeTypes = useMemo(() => ({
-    familyNode: FamilyNode,
-  }), []);
-
-  const edgeTypes = useMemo(() => ({
-    familyEdge: FamilyRelationship,
-  }), []);
 
   const onNodeClickHandler = useCallback(
     (_event: React.MouseEvent, node: Node<FamilyNodeData>) => {
@@ -350,25 +417,7 @@ const ReactFlowTreeContent: React.FC<ReactFlowTreeProps> = ({
       const timeout = setTimeout(() => fitView({ padding: 0.2 }), 200);
       return () => clearTimeout(timeout);
     }
-  }, [nodes.length, fitView]);
-
-  // Persist zoom/pan state to localStorage
-  React.useEffect(() => {
-    const savedState = localStorage.getItem('react-flow-view-state');
-    if (savedState) {
-      // Restore previous view state
-      // @ts-ignore - React Flow internal state format
-      fitView?.(JSON.parse(savedState));
-    }
-  }, [nodes.length]);
-
-  // Save zoom/pan state on unload
-  React.useEffect(() => {
-    return () => {
-      // @ts-ignore - React Flow internal state format
-      localStorage.setItem('react-flow-view-state', JSON.stringify(fitView?.()));
-    };
-  }, []);
+  }, [nodes, fitView]);
 
   // Render fallback UI if no valid data
   if (!isValidTreeData(persons, relationships)) {
@@ -403,17 +452,19 @@ const ReactFlowTreeContent: React.FC<ReactFlowTreeProps> = ({
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
-        nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
+        nodeTypes={NODE_TYPES}
+        edgeTypes={EDGE_TYPES}
         onNodeClick={onNodeClickHandler}
         fitView
       >
-        <Background
-          color="#cbd5e1"
-          gap={16}
-          size={1}
-          style={{ backgroundColor: 'var(--bg-color)' }}
-        />
+        {showGrid && (
+          <Background
+            color="#cbd5e1"
+            gap={16}
+            size={1}
+            style={{ backgroundColor: 'var(--bg-color)' }}
+          />
+        )}
         <Controls
           position="top-left"
           showZoom

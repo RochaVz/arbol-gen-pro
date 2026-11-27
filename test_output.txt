@@ -1,0 +1,171 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv5.0.5 [39m[90mC:/Users/eduardo/arbol-gen-pro[39m
+
+ [32mÔ£ô[39m src/test/TreePage.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32mÔ£ô[39m src/test/repository.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 103[2mms[22m[39m
+ [32mÔ£ô[39m src/test/persistence.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 139[2mms[22m[39m
+ [32mÔ£ô[39m src/test/photo.test.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 392[2mms[22m[39m
+ [32mÔ£ô[39m src/test/ReactFlowTree.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[33m 502[2mms[22m[39m
+ [31mÔØ»[39m src/test/Sidebar.test.tsx [2m([22m[2m2 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[33m 639[2mms[22m[39m
+   [31mÔØ»[39m Sidebar mobile navigation [2m(2)[22m
+[31m     [31m├ù[31m opens the menu and closes it after navigation[39m[33m 570[2mms[22m[39m
+[31m     [31m├ù[31m closes the menu when the overlay is clicked[39m[32m 66[2mms[22m[39m
+ [32mÔ£ô[39m src/test/PersonProfile.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[33m 1743[2mms[22m[39m
+   [32mÔ£ô[39m person profile actions [2m(5)[22m
+     [33m[2mÔ£ô[22m[39m persists Agregar padres and its relationship[33m 765[2mms[22m[39m
+     [33m[2mÔ£ô[22m[39m persists Agregar pareja and its relationship[33m 302[2mms[22m[39m
+ [32mÔ£ô[39m src/test/uuid.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+ [32mÔ£ô[39m src/test/cascade.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 72[2mms[22m[39m
+ [32mÔ£ô[39m src/test/conflict.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 40[2mms[22m[39m
+ [32mÔ£ô[39m src/test/environment.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32mÔ£ô[39m src/test/domain.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32mÔ£ô[39m src/test/tree.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ» Failed Tests 2 ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»
+
+ FAIL  src/test/Sidebar.test.tsx > Sidebar mobile navigation > opens the menu and closes it after navigation
+AssertionError: expected <div id="mobile-sidebar" ÔÇª(2)>ÔÇª(1)</div> to be null
+
+- Expected:
+null
+
++ Received:
+<div
+  class="lg:hidden fixed left-0 top-0 bottom-0 w-64 bg-white dark:bg-neutral-900 shadow-xl z-40"
+  id="mobile-sidebar"
+  style="transform: translateX(-280px);"
+>
+  <div
+    class="flex flex-col h-full"
+  >
+    <div
+      class="flex items-center border-b border-neutral-200 dark:border-neutral-700 justify-between px-4 py-4"
+    >
+      <button
+        aria-label="Colapsar men├║"
+        class="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors flex-shrink-0"
+      >
+        <div
+          style="transform: none;"
+        >
+          <svg
+            class="lucide lucide-chevron-left w-4 h-4"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="m15 18-6-6 6-6"
+            />
+          </svg>
+        </div>
+      </button>
+    </div>
+    <nav
+      class="flex-1 overflow-y-auto py-3 space-y-0.5 px-3"
+    >
+      <div
+        class="relative group"
+      >
+        <button
+          class="w-full flex items-center rounded-lg text-sm font-medium transition-colors duration-150 gap-3 px-3 py-2.5 text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-800"
+          tabindex="0"
+        >
+          <span
+            class="flex-1 text-left truncate overflow-hidden whitespace-nowrap"
+            style="opacity: 1; width: auto;"
+          >
+            ├ürbol
+          </span>
+        </button>
+      </div>
+    </nav>
+  </div>
+</div>
+
+ ÔØ» src/test/Sidebar.test.tsx:20:56
+     18|     expect(onClick).toHaveBeenCalledOnce();
+     19|     // The sidebar should close after navigation click
+     20|     expect(container.querySelector('#mobile-sidebar')).toBeNull();
+       |                                                        ^
+     21|     expect(screen.getByRole('button', { name: 'Abrir men├║' }).getAttriÔÇª
+     22|   });
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[1/2]ÔÄ»
+
+ FAIL  src/test/Sidebar.test.tsx > Sidebar mobile navigation > closes the menu when the overlay is clicked
+AssertionError: expected <div id="mobile-sidebar" ÔÇª(2)>ÔÇª(1)</div> to be null
+
+- Expected:
+null
+
++ Received:
+<div
+  class="lg:hidden fixed left-0 top-0 bottom-0 w-64 bg-white dark:bg-neutral-900 shadow-xl z-40"
+  id="mobile-sidebar"
+  style="transform: translateX(-280px);"
+>
+  <div
+    class="flex flex-col h-full"
+  >
+    <div
+      class="flex items-center border-b border-neutral-200 dark:border-neutral-700 justify-between px-4 py-4"
+    >
+      <button
+        aria-label="Colapsar men├║"
+        class="p-1.5 rounded-lg text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors flex-shrink-0"
+      >
+        <div
+          style="transform: none;"
+        >
+          <svg
+            class="lucide lucide-chevron-left w-4 h-4"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="m15 18-6-6 6-6"
+            />
+          </svg>
+        </div>
+      </button>
+    </div>
+    <nav
+      class="flex-1 overflow-y-auto py-3 space-y-0.5 px-3"
+    />
+  </div>
+</div>
+
+ ÔØ» src/test/Sidebar.test.tsx:28:56
+     26|     fireEvent.click(screen.getByRole('button', { name: 'Abrir men├║' })ÔÇª
+     27|     fireEvent.click(screen.getByRole('button', { name: 'Cerrar men├║ laÔÇª
+     28|     expect(container.querySelector('#mobile-sidebar')).toBeNull();
+       |                                                        ^
+     29|   });
+     30| });
+
+ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»ÔÄ»[2/2]ÔÄ»
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m12 passed[39m[22m[90m (13)[39m
+[2m      Tests [22m [1m[31m2 failed[39m[22m[2m | [22m[1m[32m56 passed[39m[22m[90m (58)[39m
+[2m   Start at [22m 21:55:54
+[2m   Duration [22m 9.10s[2m (environment 79%, import 10%, tests 7%, setup 2%, transform 2%)[22m
+
+[2mEnvironment [22m [33mjsdom was created 13 times[39m[2m ┬À 41.73s total, 79% of tracked time[22m
+[2m            [22m [2mcreate it once per worker with [22m[33mpool: 'vmThreads'[39m[2m (keeps per-file isolation) or [22m[33misolate: false[39m[2m (shares it across files)[22m
+[2m            [22m [2mlearn more: https://vitest.dev/guide/improving-performance#test-environments[22m
+

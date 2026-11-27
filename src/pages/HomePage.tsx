@@ -6,7 +6,7 @@ import { useToast } from '../shared/hooks/useToast';
 
 export function HomePage() {
   const navigate = useNavigate();
-  const { persons, events, photos, activeTreeId, load } = useAppStore();
+  const { trees, persons, events, photos, activeTreeId, load, setActiveTreeId } = useAppStore();
   const { addToast } = useToast();
 
   const personsInTree = activeTreeId
@@ -22,6 +22,7 @@ export function HomePage() {
         id: uuidv7(), treeId: t.entity.id,
         firstName: myName, lastName: myLastName || undefined, lifeStatus: 'alive',
       } as any);
+      setActiveTreeId(t.entity.id);
       await load();
       navigate('/tree');
       addToast('Árbol creado. Comienza a agregar familiares.', 'success');
@@ -30,15 +31,47 @@ export function HomePage() {
     }
   };
 
+  const handleSelectTree = (treeId: string) => {
+    setActiveTreeId(treeId);
+  };
+
+  const handleOpenTree = (treeId: string) => {
+    setActiveTreeId(treeId);
+    navigate('/tree');
+  };
+
+  const treeSummaries = trees
+    .filter((tree) => !tree.deletedAt)
+    .map((tree) => ({
+      id: tree.id,
+      name: tree.name,
+      description: tree.description,
+      isActive: tree.id === activeTreeId,
+      memberCount: persons.filter((person) =>
+        person.treeId === tree.id && !person.deletedAt
+      ).length,
+    }));
+
+  const generations = new Set(
+    personsInTree
+      .map((person) => person.generation)
+      .filter((generation): generation is number => typeof generation === 'number')
+  ).size;
+
   return (
     <PremiumHome
       onAddFamily={() => navigate('/tree')}
       onViewTree={() => navigate('/tree')}
       onCreateTree={handleCreateTree}
+      onSelectTree={handleSelectTree}
+      onOpenTree={handleOpenTree}
+      onOpenPhotos={() => navigate('/photos')}
+      onOpenEvents={() => navigate('/family')}
+      trees={treeSummaries}
       stats={{
         totalFamilyMembers: personsInTree.length,
-        generations: Math.max(1, Math.ceil(personsInTree.length / 3)),
-        photos: photos.filter((ph) => !ph.deletedAt).length,
+        generations: generations || (personsInTree.length > 0 ? 1 : 0),
+        photos: photos.filter((ph) => !ph.deletedAt && (!activeTreeId || personsInTree.some((person) => person.id === ph.personId))).length,
         events: events.filter((e) => !e.deletedAt && (!activeTreeId || e.treeId === activeTreeId)).length,
       }}
     />

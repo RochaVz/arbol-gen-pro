@@ -14,6 +14,7 @@ interface FamilyEdgeData {
     | 'spouse'
     | 'sibling'
     | 'other';
+  showRelationships?: boolean;
 }
 
 export const FamilyRelationship: React.FC<EdgeProps<FamilyEdgeData>> = ({
@@ -89,7 +90,7 @@ export const FamilyRelationship: React.FC<EdgeProps<FamilyEdgeData>> = ({
   return (
     <>
       <BaseEdge path={edgePath} style={edgeStyle} />
-      <EdgeLabelRenderer>
+      {data?.showRelationships !== false && <EdgeLabelRenderer>
         <div
           style={{
             position: 'absolute',
@@ -107,7 +108,7 @@ export const FamilyRelationship: React.FC<EdgeProps<FamilyEdgeData>> = ({
         >
           {getRelationshipLabel(data?.relationType)}
         </div>
-      </EdgeLabelRenderer>
+      </EdgeLabelRenderer>}
     </>
   );
 };

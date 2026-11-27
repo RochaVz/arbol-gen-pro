@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { hasCycle, wouldCreateCycle } from '../shared/utils/graph';
-import { comparePartialDates, isValidPartialDate, partialDateToNumber } from '../shared/utils/date';
+import {
+  comparePartialDates,
+  isValidPartialDate,
+  partialDateToNumber,
+  partialDateToString,
+  partialDatesOverlap,
+} from '../shared/utils/date';
 import { validatePerson, validateRelationship, validateTree } from '../shared/utils/validation';
 import { searchPersons } from '../shared/utils/search';
 
@@ -32,6 +38,15 @@ describe('PartialDate', () => {
   });
   it('number', () => {
     expect(partialDateToNumber({ year: 1900, month: 1, day: 2 })).toBe(19000102);
+  });
+  it('formats and compares date ranges', () => {
+    expect(partialDateToString({ year: 1900, month: 1, day: 2, qualifier: 'circa' }))
+      .toBe('c. 1900-01-02');
+    expect(partialDatesOverlap(
+      { year: 1900, rangeEnd: { year: 1920 } },
+      { year: 1910, rangeEnd: { year: 1930 } },
+    )).toBe(true);
+    expect(partialDatesOverlap({ year: 1900 }, { year: 1920 })).toBe(false);
   });
 });
 

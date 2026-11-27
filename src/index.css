@@ -29,6 +29,19 @@ html, body {
     -moz-osx-font-smoothing: grayscale;
   }
 
+  button, [role='button'] {
+    cursor: pointer;
+  }
+
+  button:focus-visible,
+  [role='button']:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: 3px solid rgba(212, 165, 116, 0.72);
+    outline-offset: 3px;
+  }
+
   a {
     @apply text-primary-600 no-underline transition-colors duration-200;
 

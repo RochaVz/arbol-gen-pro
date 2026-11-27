@@ -39,7 +39,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ items, logo, footer, className
       <motion.button
         onClick={() => handleItemClick(item)}
         className={cn(
-          'w-full flex items-center rounded-lg text-sm font-medium transition-colors duration-150',
+          'w-full min-h-[48px] flex items-center rounded-xl text-base font-semibold transition-colors duration-150',
           collapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5',
           item.active
             ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/40 dark:text-primary-300'

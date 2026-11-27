@@ -30,7 +30,7 @@ export const Header = React.forwardRef<HTMLDivElement, HeaderProps>(
         )}
         {...props}
       >
-        <div className="px-4 sm:px-6 lg:px-8 py-4">
+        <div className="px-4 py-3 sm:px-6 lg:px-8">
           {/* Breadcrumb */}
           {breadcrumb && breadcrumb.length > 0 && (
             <nav className="flex items-center gap-2 mb-4 text-sm">
@@ -55,7 +55,7 @@ export const Header = React.forwardRef<HTMLDivElement, HeaderProps>(
             <div className="flex-1">
               {title && (
                 <motion.h1
-                  className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight"
+                  className="!mb-0 text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.1 }}
@@ -107,7 +107,7 @@ export const PageContainer = React.forwardRef<HTMLDivElement, PageContainerProps
       ref={ref}
       className={cn(
         'w-full max-w-7xl mx-auto',
-        padded && 'px-4 sm:px-6 lg:px-8 py-8 md:py-12 lg:py-16',
+        padded && 'px-4 py-6 sm:px-6 lg:px-8 lg:py-8',
         className
       )}
       {...props}

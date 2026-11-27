@@ -7,6 +7,7 @@ import {
 import { User } from 'lucide-react';
 import type { Person } from '../../../core/db';
 import { cn } from '../../utils/cn';
+import type { TreeStyle } from '../../../features/family-tree/components/templates/treeTemplateGallery';
 
 interface FamilyNodeData {
   label: string;
@@ -15,13 +16,28 @@ interface FamilyNodeData {
   isAlive: boolean;
   isTreeCenter: boolean;
   generation?: number;
+  showPhotos: boolean;
+  showDates: boolean;
+  showLabels: boolean;
+  visualStyle?: TreeStyle;
 }
 
 export const FamilyNode: React.FC<NodeProps<FamilyNodeData>> = ({
   data,
   selected,
 }) => {
-  const { label, person, photoUrl, isAlive, isTreeCenter, generation } = data;
+  const {
+    label,
+    person,
+    photoUrl,
+    isAlive,
+    isTreeCenter,
+    generation,
+    showPhotos,
+    showDates,
+    showLabels,
+    visualStyle,
+  } = data;
 
   // Determine gender border color (subtle left border)
   const genderBorderColor = person?.sex === 'male' ? 'border-l-blue-500' : 'border-l-pink-500';
@@ -51,8 +67,13 @@ export const FamilyNode: React.FC<NodeProps<FamilyNodeData>> = ({
 
   return (
     <div
+      style={{
+        borderTopColor: visualStyle?.colorPrimary,
+        backgroundColor: visualStyle?.colorSecondary,
+      }}
       className={cn(
-        'bg-white dark:bg-slate-800 rounded-xl shadow-md border-2 border-l-4 overflow-hidden',
+        'bg-white dark:bg-slate-800 shadow-md border-2 border-l-4 overflow-hidden',
+        visualStyle?.cardShape === 'square' ? 'rounded-md' : 'rounded-xl',
         'w-56 cursor-pointer transition-all duration-200',
         selected ? 'border-primary-500 shadow-lg scale-105' : 'border-slate-200 dark:border-slate-700',
         genderBorderColor,
@@ -65,7 +86,7 @@ export const FamilyNode: React.FC<NodeProps<FamilyNodeData>> = ({
       <Handle type="source" position={Position.Bottom} />
 
       {/* Avatar section */}
-      <div className="relative">
+      {showPhotos && <div className="relative">
         {photoUrl ? (
           <img
             src={photoUrl}
@@ -99,17 +120,17 @@ export const FamilyNode: React.FC<NodeProps<FamilyNodeData>> = ({
             isAlive ? 'bg-green-500' : 'bg-slate-500'
           )}
         />
-      </div>
+      </div>}
 
       {/* Content section */}
       <div className="p-2.5">
         {/* Name - prominent */}
-        <h3 className="font-bold text-sm text-slate-900 dark:text-white truncate leading-tight mb-1">
+        {showLabels && <h3 className="font-bold text-sm text-slate-900 dark:text-white truncate leading-tight mb-1">
           {label}
-        </h3>
+        </h3>}
 
         {/* Compact date range */}
-        {dateRange && (
+        {showDates && dateRange && (
           <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mb-2 truncate">
             {dateRange}
           </p>

@@ -67,14 +67,14 @@ const PremiumLayoutInner: React.FC<PremiumLayoutProps> = ({ children, onLogout, 
       )}
       <button
         onClick={toggleDark}
-        className="w-full flex items-center gap-2 px-4 py-2 text-sm font-medium text-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
+        className="w-full flex min-h-[48px] items-center gap-3 px-4 py-2 text-base font-semibold text-neutral-600 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-xl transition-colors"
       >
         {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
         <span>{darkMode ? 'Modo claro' : 'Modo oscuro'}</span>
       </button>
       <button
         onClick={onLogout}
-        className="w-full flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+        className="w-full flex min-h-[48px] items-center gap-3 px-4 py-2 text-base font-semibold text-red-600 hover:bg-red-50 rounded-xl transition-colors"
       >
         <LogOut className="w-4 h-4" />
         <span>Cerrar sesión</span>
