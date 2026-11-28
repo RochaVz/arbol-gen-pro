@@ -27,6 +27,7 @@ Se eliminaron salidas capturadas y scripts de reparación de un solo uso, inclui
 - `errors.txt`, `output.txt`, `temp.txt` y `test.txt`;
 - `add-react-import.cjs`, `fix-props.cjs`, `fix.py`, `fix_opacity.ps1` y `run_fixes.py`;
 - logs de desarrollo no rastreados `build.log`, `dev.log` y `new_dev.log`.
+- `src/pages/TreePage_backup.txt`, detectado durante la auditoría de dominio posterior y retirado como copia obsoleta.
 
 Estos artefactos no formaban parte del runtime ni contenían código fuente activo.
 
