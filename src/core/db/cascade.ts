@@ -2,6 +2,8 @@ import { db } from './database';
 import { calculateBaseServerVersion } from './operations';
 import type { BaseEntity, EntityType, SyncOperation } from './schema';
 import { uuidv7 } from '../../shared/utils/uuid';
+import { changeLogForMutation } from '../audit/changeLog';
+import { getCurrentUserId } from '../supabase/client';
 
 function operationFor(
   entityType: EntityType,
@@ -29,7 +31,7 @@ function isActive(entity: BaseEntity): boolean {
   return entity.deletedAt === null || entity.deletedAt === undefined;
 }
 
-async function unlinkPersonReferences(personId: string): Promise<string[]> {
+async function unlinkPersonReferences(personId: string, userId: string): Promise<string[]> {
   const dependencies: string[] = [];
 
   for (const relationship of await db.relationships.toArray()) {
@@ -50,6 +52,7 @@ async function unlinkPersonReferences(personId: string): Promise<string[]> {
       const operation = operationFor('relationship', relationship, 'update', next);
       await db.relationships.put(next);
       await db.syncOutbox.add(operation);
+      await db.changeLog.put(changeLogForMutation(operation, userId, next));
       dependencies.push(operation.operationId);
     }
   }
@@ -67,6 +70,7 @@ async function unlinkPersonReferences(personId: string): Promise<string[]> {
       const operation = operationFor('event', event, 'update', next);
       await db.events.put(next);
       await db.syncOutbox.add(operation);
+      await db.changeLog.put(changeLogForMutation(operation, userId, next));
       dependencies.push(operation.operationId);
     }
   }
@@ -77,6 +81,7 @@ async function unlinkPersonReferences(personId: string): Promise<string[]> {
     const operation = operationFor('photo', photo, 'update', next);
     await db.photos.put(next);
     await db.syncOutbox.add(operation);
+    await db.changeLog.put(changeLogForMutation(operation, userId, next));
     dependencies.push(operation.operationId);
   }
 
@@ -84,8 +89,9 @@ async function unlinkPersonReferences(personId: string): Promise<string[]> {
 }
 
 export async function desvincularPerson(personId: string): Promise<void> {
-  await db.transaction('rw', db.relationships, db.events, db.photos, db.syncOutbox, async () => {
-    await unlinkPersonReferences(personId);
+  const userId = await getCurrentUserId();
+  await db.transaction('rw', db.relationships, db.events, db.photos, db.syncOutbox, db.changeLog, async () => {
+    await unlinkPersonReferences(personId, userId);
   });
 }
 
@@ -95,16 +101,17 @@ export async function softDeletePerson(
 ): Promise<{ entity: any; operation: SyncOperation } | undefined> {
   return db.transaction(
     'rw',
-    [db.persons, db.relationships, db.events, db.photos, db.syncOutbox],
+    [db.persons, db.relationships, db.events, db.photos, db.syncOutbox, db.changeLog],
     async () => {
       const person = await db.persons.get(personId);
       if (!person || !isActive(person)) return undefined;
 
-      const dependencies = await unlinkPersonReferences(personId);
+      const dependencies = await unlinkPersonReferences(personId, deletedBy);
       const tombstoned = { ...person, deletedAt: Date.now(), deletedBy };
       const operation = operationFor('person', person, 'delete', null, dependencies);
       await db.persons.put(tombstoned);
       await db.syncOutbox.add(operation);
+      await db.changeLog.put(changeLogForMutation(operation, deletedBy, tombstoned));
       return { entity: tombstoned, operation };
     },
   );
@@ -125,6 +132,7 @@ export async function softDeleteTree(
       db.treeMemberships,
       db.treeInvitations,
       db.syncOutbox,
+      db.changeLog,
     ],
     async () => {
       const tree = await db.trees.get(treeId);
@@ -150,6 +158,7 @@ export async function softDeleteTree(
           const operation = operationFor(entityType, entity, 'delete', null);
           await table.put(tombstoned);
           await db.syncOutbox.add(operation);
+          await db.changeLog.put(changeLogForMutation(operation, deletedBy, tombstoned));
           contentDependencies.push(operation.operationId);
         }
       }
@@ -158,6 +167,7 @@ export async function softDeleteTree(
       const treeOperation = operationFor('tree', tree, 'delete', null, contentDependencies);
       await db.trees.put(tombstonedTree);
       await db.syncOutbox.add(treeOperation);
+      await db.changeLog.put(changeLogForMutation(treeOperation, deletedBy, tombstonedTree));
 
       for (const membership of await db.treeMemberships.toArray()) {
         if (membership.treeId !== treeId || !isActive(membership)) continue;
@@ -165,6 +175,7 @@ export async function softDeleteTree(
         const operation = operationFor('treeMembership', membership, 'delete', null, [treeOperation.operationId]);
         await db.treeMemberships.put(tombstoned);
         await db.syncOutbox.add(operation);
+        await db.changeLog.put(changeLogForMutation(operation, deletedBy, tombstoned));
       }
 
       return { entity: tombstonedTree, operation: treeOperation };

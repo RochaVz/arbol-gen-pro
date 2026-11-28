@@ -2,6 +2,8 @@ import { db } from './database';
 import type { SyncOperation } from './schema';
 import { uuidv7 } from '../../shared/utils/uuid';
 import { assertEntityIdentities, assertOperationIdentities } from './identity';
+import { changeLogForMutation } from '../audit/changeLog';
+import { getCurrentUserId } from '../supabase/client';
 
 export function calculateBaseServerVersion(
   operationType: 'create' | 'update' | 'delete',
@@ -22,9 +24,11 @@ export async function writeEntityWithOperation(
 ): Promise<void> {
   assertEntityIdentities(entity);
   assertOperationIdentities(operation);
-  await db.transaction('rw', entityTable, db.syncOperations, async () => {
+  const userId = await getCurrentUserId();
+  await db.transaction('rw', entityTable, db.syncOperations, db.changeLog, async () => {
     await entityTable.put(entity);
     await db.syncOperations.add(operation);
+    await db.changeLog.put(changeLogForMutation(operation, userId, entity));
   });
 }
 
@@ -69,9 +73,11 @@ export async function writeLocal(
     dependsOn: params.dependsOn ?? []
   };
   assertOperationIdentities(operation);
-  await db.transaction('rw', entityTable, db.syncOperations, async () => {
+  const userId = await getCurrentUserId();
+  await db.transaction('rw', entityTable, db.syncOperations, db.changeLog, async () => {
     await entityTable.put(entity);
     await db.syncOperations.add(operation);
+    await db.changeLog.put(changeLogForMutation(operation, userId, entity));
   });
   return { entity, operation };
 }

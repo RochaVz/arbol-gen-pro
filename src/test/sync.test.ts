@@ -18,10 +18,11 @@ vi.mock('../core/supabase/client', () => ({
 import { SyncEngine } from '../core/sync/syncEngine';
 
 async function clearSyncData(): Promise<void> {
-  await db.transaction('rw', [db.persons, db.syncOutbox, db.conflictSnapshots], async () => {
+  await db.transaction('rw', [db.persons, db.syncOutbox, db.conflictSnapshots, db.changeLog], async () => {
     await db.persons.clear();
     await db.syncOutbox.clear();
     await db.conflictSnapshots.clear();
+    await db.changeLog.clear();
   });
 }
 

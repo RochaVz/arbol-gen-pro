@@ -8,6 +8,7 @@ describe('repositories', () => {
   beforeEach(async () => {
     await db.persons.clear();
     await db.syncOutbox.clear();
+    await db.changeLog.clear();
   });
 
   it('create enqueues operation', async () => {
@@ -23,6 +24,15 @@ describe('repositories', () => {
     expect(r.operation.operationType).toBe('create');
     expect(await db.persons.count()).toBe(1);
     expect(await db.syncOutbox.count()).toBe(1);
+    const [change] = await db.changeLog.toArray();
+    expect(change).toMatchObject({
+      id: r.operation.operationId,
+      entityType: 'person',
+      entityId: p.id,
+      operation: 'create',
+      source: 'local',
+    });
+    expect(change.payload).toMatchObject({ id: p.id, firstName: 'Ana' });
   });
 
   it('update increments and enqueues', async () => {
@@ -33,6 +43,7 @@ describe('repositories', () => {
     const got = await db.persons.get(p.id);
     expect(got?.firstName).toBe('Anita');
     expect(await db.syncOutbox.count()).toBe(2);
+    expect(await db.changeLog.count()).toBe(2);
   });
 
   it('delete tombstones', async () => {
@@ -48,5 +59,6 @@ describe('repositories', () => {
     expect(await repo.getById(p.id, true)).toBeDefined();
     expect((await repo.list()).length).toBe(0);
     expect((await repo.list(true)).length).toBe(1);
+    expect(await db.changeLog.count()).toBe(2);
   });
 });

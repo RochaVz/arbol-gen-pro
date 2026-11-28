@@ -4,6 +4,7 @@
 
 import { db } from '../db';
 import type { EntityType } from '../db/schema';
+import type { ChangeLog } from '../db/schema';
 import { getAccessToken } from '../supabase/client';
 
 const TABLE_MAP: Record<EntityType, any> = {
@@ -92,6 +93,17 @@ export async function pullChanges(treeId?: string): Promise<PullResult> {
 
     const data = await res.json();
     const entities = data.entities ?? {};
+    const remoteLogs = (data.changeLogs ?? []).map((row: any): ChangeLog => ({
+      id: row.id,
+      treeId: row.tree_id ?? undefined,
+      entityType: row.entity_type,
+      entityId: row.entity_id,
+      operation: row.operation,
+      timestamp: row.timestamp,
+      userId: row.user_id,
+      payload: row.payload ?? null,
+      source: 'remote',
+    }));
     const nextCursor = typeof data.cursor === 'number' ? data.cursor : cursor;
 
     for (const [et, rows] of Object.entries(entities)) {
@@ -99,7 +111,7 @@ export async function pullChanges(treeId?: string): Promise<PullResult> {
       if (!table) continue;
       for (const row of rows as any[]) {
         const entity = rowToEntity(row);
-        await db.transaction('rw', table, db.syncOutbox, async () => {
+        await db.transaction('rw', table, db.syncOutbox, db.changeLog, async () => {
           const pending = await db.syncOutbox
             .where('[entityType+entityId]').equals([et, entity.id]).toArray();
           const hasPending = pending.some((p) =>
@@ -107,6 +119,10 @@ export async function pullChanges(treeId?: string): Promise<PullResult> {
           );
           if (hasPending) return;
           await table.put(entity);
+          const entityLogs = remoteLogs.filter((log: ChangeLog) =>
+            log.entityType === et && log.entityId === entity.id
+          );
+          if (entityLogs.length) await db.changeLog.bulkPut(entityLogs);
           applied += 1;
         });
       }

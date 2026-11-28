@@ -1,6 +1,8 @@
 import { db } from '../db';
 import type { SyncOperation, EntityType } from '../db/schema';
 import { uuidv7 } from '../../shared/utils/uuid';
+import { getCurrentUserId } from '../supabase/client';
+import { changeLogForMutation } from '../audit/changeLog';
 
 // Re-export tableFor lookup for convenience.
 function tableForEntity(entityType: EntityType): any {
@@ -66,15 +68,32 @@ export async function resolveConflict(
   const snap = await db.conflictSnapshots.get(operationId);
   const server = snap?.server ? rowToEntity(snap.server) : null;
   const serverVersion = server?.serverVersion ?? server?.server_version ?? op.baseServerVersion;
+  const userId = await getCurrentUserId();
 
   if (decision === 'keep_server') {
-    if (table && server) {
-      const local = await table.get(op.entityId);
-      const applied = { ...(local ?? {}), ...server, id: op.entityId, syncStatus: 'synced' };
-      await table.put(applied);
-    }
-    await db.syncOutbox.update(operationId, { status: 'confirmed', lastError: 'resolved_keep_server' });
-    if (snap) await db.conflictSnapshots.delete(operationId);
+    await db.transaction(
+      'rw',
+      [...(table ? [table] : []), db.syncOutbox, db.conflictSnapshots, db.changeLog],
+      async () => {
+        if (table && server) {
+          const local = await table.get(op.entityId);
+          const applied = { ...(local ?? {}), ...server, id: op.entityId, syncStatus: 'synced' };
+          await table.put(applied);
+          const resolutionOperation: SyncOperation = {
+            ...op,
+            operationId: uuidv7(),
+            operationType: 'update',
+            createdAt: Date.now(),
+            status: 'confirmed',
+            lastError: 'resolved_keep_server',
+            payload: applied,
+          };
+          await db.changeLog.put(changeLogForMutation(resolutionOperation, userId, applied));
+        }
+        await db.syncOutbox.update(operationId, { status: 'confirmed', lastError: 'resolved_keep_server' });
+        if (snap) await db.conflictSnapshots.delete(operationId);
+      },
+    );
     return { ok: true };
   }
 
@@ -101,13 +120,15 @@ export async function resolveConflict(
   };
 
   if (table) {
-    await db.transaction('rw', table, db.syncOutbox, async () => {
+    await db.transaction('rw', table, db.syncOutbox, db.changeLog, async () => {
       await table.update(op.entityId, { syncStatus: 'pending' });
       await db.syncOutbox.add(newOp);
+      await db.changeLog.put(changeLogForMutation(newOp, userId, localEntity));
       await db.syncOutbox.update(operationId, { status: 'confirmed', lastError: `resolved_${decision}` });
     });
   } else {
     await db.syncOutbox.add(newOp);
+    await db.changeLog.put(changeLogForMutation(newOp, userId, localEntity));
     await db.syncOutbox.update(operationId, { status: 'confirmed', lastError: `resolved_${decision}` });
   }
   if (snap) await db.conflictSnapshots.delete(operationId);

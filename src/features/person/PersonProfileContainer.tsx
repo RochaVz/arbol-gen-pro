@@ -110,7 +110,7 @@ export function PersonProfileContainer({
     try {
       if (action === 'event') {
         const [year, month, day] = eventDate.split('-').map(Number);
-        await db.transaction('rw', [db.events, db.syncOperations], async () => {
+        await db.transaction('rw', [db.events, db.syncOperations, db.changeLog], async () => {
           const dependsOn = await unconfirmedCreateOperations([
             { entityType: 'tree', entityId: person.treeId },
             { entityType: 'person', entityId: person.id },
@@ -133,7 +133,7 @@ export function PersonProfileContainer({
           person2Id: action === 'parent' ? person.id : relative.id,
           type: action === 'partner' ? 'spouse' : 'parent',
         };
-        await db.transaction('rw', [db.persons, db.relationships, db.syncOperations], async () => {
+        await db.transaction('rw', [db.persons, db.relationships, db.syncOperations, db.changeLog], async () => {
           const treeDependencies = await unconfirmedCreateOperations([
             { entityType: 'tree', entityId: person.treeId },
           ]);

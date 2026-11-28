@@ -64,7 +64,7 @@ export async function savePhotoLocally(params: SavePhotoParams): Promise<SavePho
     { id: uuidv7(), photoId: id, kind: 'thumbnail', blob: versions.thumbnail, size: versions.thumbnail.size, createdAt: now, updatedAt: now, serverVersion: 0, localRevision: 1, syncStatus: 'pending', deletedAt: null } as PhotoBlob,
   ];
 
-  const { entity, operation } = await db.transaction('rw', [db.photos, db.photoBlobs, db.syncOperations], async () => {
+  const { entity, operation } = await db.transaction('rw', [db.photos, db.photoBlobs, db.syncOperations, db.changeLog], async () => {
     const dependencies: Array<{ entityType: 'tree' | 'person' | 'event'; entityId: string }> = [
       { entityType: 'tree', entityId: treeId },
     ];

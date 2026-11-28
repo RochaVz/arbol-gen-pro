@@ -288,6 +288,20 @@ Deno.serve(async (req) => {
       if (error) throw error;
     }
 
+    const { error: changeLogError } = await admin.from('change_log').insert({
+      id: operationId,
+      tree_id: treeId,
+      entity_type: entityType,
+      entity_id: entityId,
+      operation: operationType,
+      timestamp: now,
+      user_id: userId,
+      payload: operationType === 'delete'
+        ? { deleted_at: now, deleted_by: userId }
+        : stripMeta(payload),
+    });
+    if (changeLogError) throw changeLogError;
+
     await admin.from('processed_operations').insert({
       operation_id: operationId,
       user_id: userId,

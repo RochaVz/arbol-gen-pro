@@ -120,8 +120,12 @@ Deno.serve(async (req) => {
     entities[et] = rows ?? [];
   }
 
+  const operationIds = filteredOps.map((op: any) => op.operation_id);
+  const { data: changeLogs } = operationIds.length
+    ? await admin.from('change_log').select('*').in('id', operationIds)
+    : { data: [] };
   const cursor = ops?.length ? ops[ops.length - 1].feed_sequence : since;
   const hasMore = (ops?.length ?? 0) === limit;
 
-  return json({ operations: filteredOps, entities, cursor: Number(cursor), hasMore }, 200);
+  return json({ operations: filteredOps, entities, changeLogs: changeLogs ?? [], cursor: Number(cursor), hasMore }, 200);
 });

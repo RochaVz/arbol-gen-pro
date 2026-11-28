@@ -1,7 +1,7 @@
 import { Dexie, type Table } from 'dexie';
 import type {
   Tree, Person, Relationship, Event, Photo, SyncOperation,
-  TreeMembership, TreeInvitation, PhotoBlob, AuditLogEntry
+  TreeMembership, TreeInvitation, PhotoBlob, AuditLogEntry, ChangeLog
 } from './schema';
 
 import { uuidv7 } from '../../shared/utils/uuid';
@@ -21,6 +21,7 @@ export class Database extends Dexie {
   declare treeInvitations: Table<TreeInvitation, string>;
   declare photoBlobs: Table<PhotoBlob, string>;
   declare auditLog: Table<AuditLogEntry, string>;
+  declare changeLog: Table<ChangeLog, string>;
 
 
   declare conflictSnapshots: Table<{ operationId: string; server: any; createdAt: number }, string>;
@@ -107,6 +108,21 @@ export class Database extends Dexie {
       }
     });
 
+    this.version(6).stores({
+      trees: 'id, ownerId, deletedAt',
+      persons: 'id, treeId, deletedAt',
+      relationships: 'id, treeId, deletedAt',
+      events: 'id, treeId, deletedAt',
+      photos: 'id, treeId, personId, deletedAt',
+      syncOutbox: 'operationId, status, [entityType+entityId], createdAt',
+      treeMemberships: 'id, treeId, userId',
+      treeInvitations: 'id, treeId',
+      photoBlobs: 'id, photoId, kind',
+      conflictSnapshots: 'operationId',
+      auditLog: 'id, treeId, entityType, action, createdAt',
+      changeLog: 'id, treeId, entityType, entityId, operation, timestamp, userId, source',
+    });
+
     const entityTables: Array<Table<any, string>> = [
       this.trees, this.persons, this.relationships, this.events, this.photos,
       this.treeMemberships, this.treeInvitations, this.photoBlobs, this.auditLog
@@ -152,6 +168,12 @@ export class Database extends Dexie {
         operationId: changes.operationId ?? snapshot.operationId,
         entityId: changes.operationId ?? snapshot.operationId,
       });
+    });
+    this.changeLog.hook('creating', (_primKey, entry) => {
+      assertEntityIdentities(entry as unknown as Record<string, unknown>);
+    });
+    this.changeLog.hook('updating', (mods, _primKey, entry) => {
+      assertEntityIdentities({ ...entry, ...mods } as Record<string, unknown>);
     });
   }
 }

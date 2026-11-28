@@ -138,6 +138,18 @@ export interface SyncOperation {
   nextRetryAt?: number;
 }
 
+export interface ChangeLog {
+  id: string;
+  treeId?: string;
+  entityType: EntityType;
+  entityId: string;
+  operation: OperationType;
+  timestamp: number;
+  userId: string;
+  payload: Record<string, unknown> | null;
+  source: 'local' | 'remote';
+}
+
 // Tree memberships - User permissions on trees
 export interface TreeMembership extends BaseEntity {
   treeId: string;
