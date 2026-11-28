@@ -4,6 +4,7 @@ import type { Table } from 'dexie';
 import { sendOperation } from './syncClient';
 import { pullChanges } from './pullClient';
 import { getAccessToken } from '../supabase/client';
+import { isUuid } from '../../shared/utils/uuid';
 
 export type SyncVisualStatus = 'offline' | 'synced' | 'pending' | 'syncing' | 'conflict' | 'error';
 
@@ -116,16 +117,28 @@ export class SyncEngine {
 
       const pendingOps: SyncOperation[] = await db.syncOutbox
         .where('status').equals('pending').toArray();
+      const now = Date.now();
 
       const runnable = pendingOps
-        .filter((op) => (op.dependsOn ?? []).every((d) => confirmedIds.has(d)))
+        .filter((op) =>
+          (!op.nextRetryAt || op.nextRetryAt <= now)
+          && (op.dependsOn ?? []).every((d) => confirmedIds.has(d))
+        )
         .sort((a, b) => a.createdAt - b.createdAt);
 
       if (runnable.length === 0) {
+        const pull = await pullChanges();
         const counts = await readSyncQueueCounts();
+        if (!pull.ok) {
+          return {
+            ok: false,
+            message: `Pull fallido: ${pull.message ?? 'error desconocido'}`,
+            status: 'error',
+          };
+        }
         return { ok: true, message: counts0.pending + counts0.inFlight > 0
           ? 'Operaciones bloqueadas por dependencias.'
-          : 'Todo esta sincronizado localmente.', status: deriveSyncStatus(counts, online, false) };
+          : 'Todo esta sincronizado.', status: deriveSyncStatus(counts, online, false) };
       }
 
       this.emitProgress({ done: 0, total: runnable.length });
@@ -139,13 +152,36 @@ export class SyncEngine {
         if (result.kind === 'applied' || result.kind === 'alreadyProcessed') {
           const sv = result.serverVersion;
           const table = tableFor(op.entityType);
-          if (table && sv != null) {
-            const row = await table.get(op.entityId);
-            if (row) {
-              await table.update(op.entityId, { serverVersion: sv, syncStatus: 'synced' });
+          await db.transaction('rw', [...(table ? [table] : []), db.syncOutbox], async () => {
+            if (table && sv != null) {
+              const row = await table.get(op.entityId);
+              const related = await db.syncOutbox
+                .where('[entityType+entityId]').equals([op.entityType, op.entityId]).toArray();
+              const newer = related.filter((candidate) =>
+                candidate.operationId !== op.operationId
+                && (candidate.status === 'pending' || candidate.status === 'in_flight' || candidate.status === 'blocked')
+              );
+              if (row) {
+                await table.update(op.entityId, {
+                  serverVersion: sv,
+                  syncStatus: newer.length ? 'pending' : 'synced',
+                });
+              }
+              for (const candidate of newer) {
+                if (candidate.status === 'pending') {
+                  await db.syncOutbox.update(candidate.operationId, {
+                    baseServerVersion: sv,
+                    nextRetryAt: undefined,
+                  });
+                }
+              }
             }
-          }
-          await db.syncOutbox.update(op.operationId, { status: 'confirmed', lastError: null });
+            await db.syncOutbox.update(op.operationId, {
+              status: 'confirmed',
+              lastError: null,
+              nextRetryAt: undefined,
+            });
+          });
           confirmedIds.add(op.operationId);
         } else if (result.kind === 'conflict') {
           await db.syncOutbox.update(op.operationId, { status: 'blocked', lastError: result.conflictKind ?? 'conflict' });
@@ -168,13 +204,20 @@ export class SyncEngine {
             status: terminal ? 'failed' : 'pending',
             retryCount: newRetry,
             lastError: result.kind === 'failed' ? (result.errorCode ?? 'error') : result.message,
+            nextRetryAt: terminal ? undefined : Date.now() + Math.min(2 ** newRetry * 1000, 60_000),
           });
         }
         this.emitProgress({ done: i + 1, total: runnable.length });
       }
 
-      // Descarga de cambios remotos (Fase 8).
-      await pullChanges().catch(() => { /* ignore */ });
+      const pull = await pullChanges();
+      if (!pull.ok) {
+        return {
+          ok: false,
+          message: `Push completado; pull fallido: ${pull.message ?? 'error desconocido'}`,
+          status: 'error',
+        };
+      }
 
       const counts = await readSyncQueueCounts();
       const status = deriveSyncStatus(counts, online, false);
@@ -192,7 +235,7 @@ export class SyncEngine {
     }
     const all = await db.syncOutbox.toArray();
     for (const op of all) {
-      if (!op.operationId || !op.entityType || !op.entityId || !op.operationType) {
+      if (!isUuid(op.operationId) || !isUuid(op.entityId)) {
         await db.syncOutbox.update(op.operationId, { status: 'failed', lastError: 'corrupt_operation' });
       }
     }

@@ -16,15 +16,19 @@ const TABLE_MAP: Record<EntityType, any> = {
   treeInvitation: db.treeInvitations,
 };
 
-const CURSOR_KEY = 'arbol-gen-pro-pull-cursor';
+const CURSOR_KEY = 'arbol-gen-pro-pull-cursor-v2';
 
-export function getPullCursor(): number {
-  const v = localStorage.getItem(CURSOR_KEY);
+function cursorKey(treeId?: string): string {
+  return treeId ? `${CURSOR_KEY}:${encodeURIComponent(treeId)}` : CURSOR_KEY;
+}
+
+export function getPullCursor(treeId?: string): number {
+  const v = localStorage.getItem(cursorKey(treeId));
   return v ? Number(v) : 0;
 }
 
-export function setPullCursor(c: number): void {
-  localStorage.setItem(CURSOR_KEY, String(c));
+export function setPullCursor(c: number, treeId?: string): void {
+  localStorage.setItem(cursorKey(treeId), String(c));
 }
 
 function snakeToCamelKey(k: string): string {
@@ -50,53 +54,70 @@ export interface PullResult {
 
 export async function pullChanges(treeId?: string): Promise<PullResult> {
   const base = import.meta.env.VITE_SUPABASE_URL;
-  if (!base) return { ok: false, applied: 0, cursor: getPullCursor(), message: 'Supabase no configurado' };
+  if (!base) return { ok: false, applied: 0, cursor: getPullCursor(treeId), message: 'Supabase no configurado' };
 
   const token = await getAccessToken();
-  if (!token) return { ok: false, applied: 0, cursor: getPullCursor(), message: 'Sin sesion' };
+  if (!token) return { ok: false, applied: 0, cursor: getPullCursor(treeId), message: 'Sin sesion' };
 
   const url = `${base.replace(/\/$/, '')}/functions/v1/pull`;
-  const since = getPullCursor();
-
-  let res: Response;
-  try {
-    res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-        apikey: import.meta.env.VITE_SUPABASE_ANON_KEY ?? '',
-      },
-      body: JSON.stringify({ since, treeId: treeId ?? null, limit: 200 }),
-    });
-  } catch (e) {
-    return { ok: false, applied: 0, cursor: since, message: String((e as Error)?.message ?? e) };
-  }
-
-  if (!res.ok) {
-    return { ok: false, applied: 0, cursor: since, message: `HTTP ${res.status}` };
-  }
-
-  const data = await res.json();
-  const entities = data.entities ?? {};
-  const cursor = typeof data.cursor === 'number' ? data.cursor : since;
-
+  let cursor = getPullCursor(treeId);
   let applied = 0;
-  for (const [et, rows] of Object.entries(entities)) {
-    const table = TABLE_MAP[et as EntityType];
-    if (!table) continue;
-    for (const row of rows as any[]) {
-      const entity = rowToEntity(row);
-      // No sobrescribir cambios locales pendientes.
-      const pending = await db.syncOutbox
-        .where('[entityType+entityId]').equals([et, entity.id]).toArray();
-      const hasPending = pending.some((p) => p.status === 'pending' || p.status === 'in_flight' || p.status === 'blocked');
-      if (hasPending) continue;
-      await table.put(entity);
-      applied += 1;
+  let hasMore = true;
+
+  while (hasMore) {
+    const pageCursor = cursor;
+    let res: Response;
+    try {
+      res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY ?? '',
+        },
+        body: JSON.stringify({ since: cursor, treeId: treeId ?? null, limit: 200 }),
+      });
+    } catch (e) {
+      return {
+        ok: false,
+        applied,
+        cursor,
+        message: String((e as Error)?.message ?? e),
+      };
     }
+
+    if (!res.ok) {
+      return { ok: false, applied, cursor, message: `HTTP ${res.status}` };
+    }
+
+    const data = await res.json();
+    const entities = data.entities ?? {};
+    const nextCursor = typeof data.cursor === 'number' ? data.cursor : cursor;
+
+    for (const [et, rows] of Object.entries(entities)) {
+      const table = TABLE_MAP[et as EntityType];
+      if (!table) continue;
+      for (const row of rows as any[]) {
+        const entity = rowToEntity(row);
+        await db.transaction('rw', table, db.syncOutbox, async () => {
+          const pending = await db.syncOutbox
+            .where('[entityType+entityId]').equals([et, entity.id]).toArray();
+          const hasPending = pending.some((p) =>
+            p.status === 'pending' || p.status === 'in_flight' || p.status === 'blocked'
+          );
+          if (hasPending) return;
+          await table.put(entity);
+          applied += 1;
+        });
+      }
+    }
+
+    if (nextCursor > cursor) {
+      cursor = nextCursor;
+      setPullCursor(cursor, treeId);
+    }
+    hasMore = data.hasMore === true && nextCursor > pageCursor;
   }
 
-  if (cursor > since) setPullCursor(cursor);
   return { ok: true, applied, cursor };
 }

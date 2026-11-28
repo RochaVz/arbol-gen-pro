@@ -108,12 +108,23 @@ Deno.serve(async (req) => {
     .select('result_status, result_server_version')
     .eq('operation_id', operationId)
     .maybeSingle();
-  if (existingOp) {
+  if (existingOp?.result_status === 'applied') {
     return json({
       operationId,
       status: 'alreadyProcessed',
       serverVersion: existingOp.result_server_version,
     }, 200);
+  }
+  if (existingOp?.result_status === 'conflict') {
+    return json({
+      operationId,
+      status: 'conflict',
+      conflictKind: 'version',
+      serverVersion: existingOp.result_server_version,
+    }, 409);
+  }
+  if (existingOp?.result_status === 'failed') {
+    await admin.from('processed_operations').delete().eq('operation_id', operationId);
   }
 
   // Derivar treeId
@@ -173,6 +184,7 @@ Deno.serve(async (req) => {
         user_id: userId,
         entity_type: entityType,
         entity_id: entityId,
+        tree_id: treeId,
         operation_type: operationType,
         result_status: 'conflict',
         result_server_version: null,
@@ -186,6 +198,7 @@ Deno.serve(async (req) => {
         user_id: userId,
         entity_type: entityType,
         entity_id: entityId,
+        tree_id: treeId,
         operation_type: operationType,
         result_status: 'conflict',
         result_server_version: current.server_version,
@@ -205,6 +218,7 @@ Deno.serve(async (req) => {
         user_id: userId,
         entity_type: entityType,
         entity_id: entityId,
+        tree_id: treeId,
         operation_type: operationType,
         result_status: 'conflict',
         result_server_version: current.server_version,
@@ -279,6 +293,7 @@ Deno.serve(async (req) => {
       user_id: userId,
       entity_type: entityType,
       entity_id: entityId,
+      tree_id: treeId,
       operation_type: operationType,
       result_status: 'applied',
       result_server_version: newServerVersion,
@@ -297,6 +312,7 @@ Deno.serve(async (req) => {
         user_id: userId,
         entity_type: entityType,
         entity_id: entityId,
+        tree_id: treeId,
         operation_type: operationType,
         result_status: 'failed',
         result_server_version: null,

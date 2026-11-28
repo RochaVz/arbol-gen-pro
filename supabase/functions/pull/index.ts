@@ -77,9 +77,10 @@ Deno.serve(async (req) => {
   // Operaciones procesadas posteriores al cursor.
   const { data: ops } = await admin
     .from('processed_operations')
-    .select('operation_id, entity_type, entity_id, operation_type, result_status, result_server_version, processed_at, user_id')
-    .gt('processed_at', since)
-    .order('processed_at', { ascending: true })
+    .select('operation_id, entity_type, entity_id, operation_type, result_status, result_server_version, processed_at, feed_sequence, user_id')
+    .in('tree_id', Array.from(treeFilter))
+    .gt('feed_sequence', since)
+    .order('feed_sequence', { ascending: true })
     .limit(limit);
 
   // Derivar treeId de cada op y filtrar por acceso.
@@ -119,7 +120,8 @@ Deno.serve(async (req) => {
     entities[et] = rows ?? [];
   }
 
-  const cursor = filteredOps.length ? filteredOps[filteredOps.length - 1].processed_at : since;
+  const cursor = ops?.length ? ops[ops.length - 1].feed_sequence : since;
+  const hasMore = (ops?.length ?? 0) === limit;
 
-  return json({ operations: filteredOps, entities, cursor }, 200);
+  return json({ operations: filteredOps, entities, cursor: Number(cursor), hasMore }, 200);
 });

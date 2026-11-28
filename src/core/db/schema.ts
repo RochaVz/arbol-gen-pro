@@ -135,6 +135,7 @@ export interface SyncOperation {
   retryCount: number;
   lastError: string | null;
   dependsOn: string[];
+  nextRetryAt?: number;
 }
 
 // Tree memberships - User permissions on trees
