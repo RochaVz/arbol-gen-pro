@@ -47,6 +47,7 @@ export interface BaseEntity {
   localRevision: number;  // Only client increments
   syncStatus: SyncStatus;
   deletedAt: number | null;  // Tombstone. null = la entidad existe
+  deletedBy?: string | null;
   localOnly?: boolean;      // Creada solo en este dispositivo, nunca sube
 }
 

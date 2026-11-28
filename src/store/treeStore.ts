@@ -12,6 +12,8 @@ interface TreeNode {
   description?: string;
   createdAt: number;
   updatedAt: number;
+  deletedAt?: number | null;
+  deletedBy?: TreeId | null;
 }
 
 interface TreeStore {
@@ -26,7 +28,7 @@ interface TreeStore {
   /** Actualizar un árbol existente */
   updateTree: (id: TreeId, updates: Partial<TreeNode>) => void;
   /** Eliminar un árbol */
-  removeTree: (id: TreeId) => void;
+  removeTree: (id: TreeId, deletedBy?: TreeId) => void;
 }
 
 export const useTreeStore = create<TreeStore>((set) => ({
@@ -43,9 +45,13 @@ export const useTreeStore = create<TreeStore>((set) => ({
         tree.id === id ? { ...tree, ...updates, updatedAt: Date.now() } : tree
       ),
     })),
-  removeTree: (id) =>
+  removeTree: (id, deletedBy) =>
     set((state) => ({
-      trees: state.trees.filter((tree) => tree.id !== id),
+      trees: state.trees.map((tree) =>
+        tree.id === id
+          ? { ...tree, deletedAt: Date.now(), deletedBy: deletedBy ?? null, updatedAt: Date.now() }
+          : tree
+      ),
       activeTreeId: state.activeTreeId === id ? null : state.activeTreeId,
     })),
 }));

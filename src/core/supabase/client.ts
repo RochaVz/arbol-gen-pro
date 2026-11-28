@@ -25,11 +25,11 @@ export async function getAccessToken(): Promise<string | null> {
 
 export async function getCurrentUserId(): Promise<string> {
   if (supabase) {
-    const { data, error } = await supabase.auth.getUser();
+    const { data, error } = await supabase.auth.getSession();
     if (error) throw error;
-    if (data.user?.id) {
-      assertUuid(data.user.id, 'userId');
-      return data.user.id;
+    if (data.session?.user.id) {
+      assertUuid(data.session.user.id, 'userId');
+      return data.session.user.id;
     }
   }
 

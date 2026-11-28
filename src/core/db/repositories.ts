@@ -4,19 +4,20 @@ import type { BaseEntity, Person, Relationship, Event, Photo, Tree, TreeMembersh
 import type { SyncOperation } from './schema';
 import { validatePerson, validateRelationship, validateEvent, validateTree } from '../../shared/utils/validation';
 import { searchPersons } from '../../shared/utils/search';
-import { desvincularPerson } from './cascade';
+import { softDeletePerson, softDeleteTree } from './cascade';
+import { getCurrentUserId } from '../supabase/client';
 
 export interface Repository<T extends BaseEntity> {
-  getById(id: string): Promise<T | undefined>;
+  getById(id: string, includeDeleted?: boolean): Promise<T | undefined>;
   list(includeDeleted?: boolean): Promise<T[]>;
   create(entity: T): Promise<{ entity: T; operation: SyncOperation }>;
   update(id: string, changes: Partial<T>): Promise<{ entity: T; operation: SyncOperation } | undefined>;
-  delete(id: string): Promise<{ entity: T; operation: SyncOperation } | undefined>;
-  get(id: string): Promise<T | undefined>;
-  find(id: string): Promise<T | undefined>;
+  delete(id: string, deletedBy?: string): Promise<{ entity: T; operation: SyncOperation } | undefined>;
+  get(id: string, includeDeleted?: boolean): Promise<T | undefined>;
+  find(id: string, includeDeleted?: boolean): Promise<T | undefined>;
   findAll(includeDeleted?: boolean): Promise<T[]>;
   save(entity: T): Promise<{ entity: T; operation: SyncOperation }>;
-  remove(id: string): Promise<{ entity: T; operation: SyncOperation } | undefined>;
+  remove(id: string, deletedBy?: string): Promise<{ entity: T; operation: SyncOperation } | undefined>;
 }
 
 function notDeleted<T extends BaseEntity>(e: T): boolean {
@@ -30,9 +31,12 @@ class BaseRepository<T extends BaseEntity> implements Repository<T> {
     this.table = table;
     this.entityType = entityType;
   }
-  async getById(id: string): Promise<T | undefined> { return this.table.get(id); }
-  async get(id: string): Promise<T | undefined> { return this.getById(id); }
-  async find(id: string): Promise<T | undefined> { return this.getById(id); }
+  async getById(id: string, includeDeleted = false): Promise<T | undefined> {
+    const entity = await this.table.get(id);
+    return entity && (includeDeleted || notDeleted(entity)) ? entity : undefined;
+  }
+  async get(id: string, includeDeleted = false): Promise<T | undefined> { return this.getById(id, includeDeleted); }
+  async find(id: string, includeDeleted = false): Promise<T | undefined> { return this.getById(id, includeDeleted); }
   async list(includeDeleted = false): Promise<T[]> {
     const all = await this.table.toArray();
     return includeDeleted ? all : all.filter(notDeleted);
@@ -48,17 +52,21 @@ class BaseRepository<T extends BaseEntity> implements Repository<T> {
   }
   async update(id: string, changes: Partial<T>): Promise<{ entity: T; operation: SyncOperation } | undefined> {
     const existing = await this.table.get(id);
-    if (!existing) return undefined;
+    if (!existing || !notDeleted(existing)) return undefined;
     const merged = { ...existing, ...changes, id };
     return writeLocal(this.table, merged, { entityType: this.entityType, operationType: 'update' });
   }
-  async delete(id: string): Promise<{ entity: T; operation: SyncOperation } | undefined> {
-    const existing = await this.table.get(id);
+  async delete(id: string, deletedBy?: string): Promise<{ entity: T; operation: SyncOperation } | undefined> {
+    const existing = await this.getById(id);
     if (!existing) return undefined;
-    const tombstoned = { ...existing, deletedAt: Date.now() };
+    const tombstoned = {
+      ...existing,
+      deletedAt: Date.now(),
+      deletedBy: deletedBy ?? await getCurrentUserId(),
+    };
     return writeLocal(this.table, tombstoned, { entityType: this.entityType, operationType: 'delete' });
   }
-  async remove(id: string) { return this.delete(id); }
+  async remove(id: string, deletedBy?: string) { return this.delete(id, deletedBy); }
 }
 
 export class PersonRepository extends BaseRepository<Person> {
@@ -81,9 +89,10 @@ export class PersonRepository extends BaseRepository<Person> {
     }
     return super.update(id, changes);
   }
-  async delete(id: string) {
-    await desvincularPerson(id);
-    return super.delete(id);
+  async delete(id: string, deletedBy?: string) {
+    const existing = await this.getById(id);
+    if (!existing) return undefined;
+    return softDeletePerson(id, deletedBy ?? await getCurrentUserId());
   }
 }
 
@@ -136,6 +145,11 @@ export class TreeRepository extends BaseRepository<Tree> {
     const v = validateTree(merged);
     if (!v.ok) throw new Error(v.error as string);
     return super.update(id, changes);
+  }
+  async delete(id: string, deletedBy?: string) {
+    const existing = await this.getById(id);
+    if (!existing) return undefined;
+    return softDeleteTree(id, deletedBy ?? await getCurrentUserId());
   }
 }
 

@@ -1,83 +1,173 @@
 import { db } from './database';
 import { calculateBaseServerVersion } from './operations';
+import type { BaseEntity, EntityType, SyncOperation } from './schema';
 import { uuidv7 } from '../../shared/utils/uuid';
 
+function operationFor(
+  entityType: EntityType,
+  entity: BaseEntity,
+  operationType: SyncOperation['operationType'],
+  payload: Record<string, unknown> | null,
+  dependsOn: string[] = [],
+): SyncOperation {
+  return {
+    operationId: uuidv7(),
+    entityType,
+    entityId: entity.id,
+    operationType,
+    baseServerVersion: calculateBaseServerVersion(operationType, entity),
+    payload,
+    createdAt: Date.now(),
+    status: 'pending',
+    retryCount: 0,
+    lastError: null,
+    dependsOn,
+  };
+}
+
+function isActive(entity: BaseEntity): boolean {
+  return entity.deletedAt === null || entity.deletedAt === undefined;
+}
+
+async function unlinkPersonReferences(personId: string): Promise<string[]> {
+  const dependencies: string[] = [];
+
+  for (const relationship of await db.relationships.toArray()) {
+    if (!isActive(relationship)) continue;
+    const next: any = {
+      ...relationship,
+      personId: relationship.personId === personId ? null : relationship.personId,
+      relativeId: relationship.relativeId === personId ? null : relationship.relativeId,
+      person1Id: relationship.person1Id === personId ? null : relationship.person1Id,
+      person2Id: relationship.person2Id === personId ? null : relationship.person2Id,
+    };
+    if (
+      next.personId !== relationship.personId
+      || next.relativeId !== relationship.relativeId
+      || next.person1Id !== relationship.person1Id
+      || next.person2Id !== relationship.person2Id
+    ) {
+      const operation = operationFor('relationship', relationship, 'update', next);
+      await db.relationships.put(next);
+      await db.syncOutbox.add(operation);
+      dependencies.push(operation.operationId);
+    }
+  }
+
+  for (const event of await db.events.toArray()) {
+    if (!isActive(event)) continue;
+    const next: any = {
+      ...event,
+      personId: event.personId === personId ? null : event.personId,
+      personIds: Array.isArray(event.personIds)
+        ? event.personIds.filter((id) => id !== personId)
+        : event.personIds,
+    };
+    if (next.personId !== event.personId || next.personIds?.length !== event.personIds?.length) {
+      const operation = operationFor('event', event, 'update', next);
+      await db.events.put(next);
+      await db.syncOutbox.add(operation);
+      dependencies.push(operation.operationId);
+    }
+  }
+
+  for (const photo of await db.photos.toArray()) {
+    if (!isActive(photo) || photo.personId !== personId) continue;
+    const next: any = { ...photo, personId: null };
+    const operation = operationFor('photo', photo, 'update', next);
+    await db.photos.put(next);
+    await db.syncOutbox.add(operation);
+    dependencies.push(operation.operationId);
+  }
+
+  return dependencies;
+}
+
 export async function desvincularPerson(personId: string): Promise<void> {
-  await db.transaction('rw', db.persons, db.relationships, db.events, db.photos, db.syncOutbox, async () => {
-    // Relationships
-    const rels = await db.relationships.toArray();
-    for (const r of rels) {
-      let changed = false;
-      const next: any = { ...r };
-      if (next.personId === personId) { next.personId = null; changed = true; }
-      if (next.relativeId === personId) { next.relativeId = null; changed = true; }
-      if (next.person1Id === personId) { next.person1Id = null; changed = true; }
-      if (next.person2Id === personId) { next.person2Id = null; changed = true; }
-      if (changed) {
-        await db.relationships.put(next as any);
-        await db.syncOutbox.add({
-          operationId: uuidv7(),
-          entityType: 'relationship',
-          entityId: r.id,
-          operationType: 'update',
-          baseServerVersion: calculateBaseServerVersion('update', r),
-          payload: next,
-          createdAt: Date.now(),
-          status: 'pending',
-          retryCount: 0,
-          lastError: null,
-          dependsOn: []
-        });
-      }
-    }
-
-    // Events
-    const events = await db.events.toArray();
-    for (const e of events) {
-      if (e.personId === personId) {
-        const next = { ...e, personId: null };
-        await db.events.put(next as any);
-        await db.syncOutbox.add({
-          operationId: uuidv7(),
-          entityType: 'event',
-          entityId: e.id,
-          operationType: 'update',
-          baseServerVersion: calculateBaseServerVersion('update', e),
-          payload: next,
-          createdAt: Date.now(),
-          status: 'pending',
-          retryCount: 0,
-          lastError: null,
-          dependsOn: []
-        });
-      }
-      if (Array.isArray(e.personIds) && e.personIds.includes(personId)) {
-        const next = { ...e, personIds: e.personIds.filter((x) => x !== personId) };
-        await db.events.put(next as any);
-      }
-    }
-
-    // Photos
-    const photos = await db.photos.toArray();
-    for (const ph of photos) {
-      if (ph.personId === personId) {
-        const next = { ...ph, personId: null };
-        await db.photos.put(next as any);
-        await db.syncOutbox.add({
-          operationId: uuidv7(),
-          entityType: 'photo',
-          entityId: ph.id,
-          operationType: 'update',
-          baseServerVersion: calculateBaseServerVersion('update', ph),
-          payload: next,
-          createdAt: Date.now(),
-          status: 'pending',
-          retryCount: 0,
-          lastError: null,
-          dependsOn: []
-        });
-      }
-    }
+  await db.transaction('rw', db.relationships, db.events, db.photos, db.syncOutbox, async () => {
+    await unlinkPersonReferences(personId);
   });
 }
 
+export async function softDeletePerson(
+  personId: string,
+  deletedBy: string,
+): Promise<{ entity: any; operation: SyncOperation } | undefined> {
+  return db.transaction(
+    'rw',
+    [db.persons, db.relationships, db.events, db.photos, db.syncOutbox],
+    async () => {
+      const person = await db.persons.get(personId);
+      if (!person || !isActive(person)) return undefined;
+
+      const dependencies = await unlinkPersonReferences(personId);
+      const tombstoned = { ...person, deletedAt: Date.now(), deletedBy };
+      const operation = operationFor('person', person, 'delete', null, dependencies);
+      await db.persons.put(tombstoned);
+      await db.syncOutbox.add(operation);
+      return { entity: tombstoned, operation };
+    },
+  );
+}
+
+export async function softDeleteTree(
+  treeId: string,
+  deletedBy: string,
+): Promise<{ entity: any; operation: SyncOperation } | undefined> {
+  return db.transaction(
+    'rw',
+    [
+      db.trees,
+      db.persons,
+      db.relationships,
+      db.events,
+      db.photos,
+      db.treeMemberships,
+      db.treeInvitations,
+      db.syncOutbox,
+    ],
+    async () => {
+      const tree = await db.trees.get(treeId);
+      if (!tree || !isActive(tree)) return undefined;
+      const now = Date.now();
+      const contentDependencies: string[] = [];
+
+      const entityTables: Array<{
+        entityType: EntityType;
+        table: any;
+        rows: any[];
+      }> = [
+        { entityType: 'relationship', table: db.relationships, rows: await db.relationships.toArray() },
+        { entityType: 'event', table: db.events, rows: await db.events.toArray() },
+        { entityType: 'photo', table: db.photos, rows: await db.photos.toArray() },
+        { entityType: 'person', table: db.persons, rows: await db.persons.toArray() },
+        { entityType: 'treeInvitation', table: db.treeInvitations, rows: await db.treeInvitations.toArray() },
+      ];
+
+      for (const { entityType, table, rows } of entityTables) {
+        for (const entity of rows.filter((row) => row.treeId === treeId && isActive(row))) {
+          const tombstoned = { ...entity, deletedAt: now, deletedBy };
+          const operation = operationFor(entityType, entity, 'delete', null);
+          await table.put(tombstoned);
+          await db.syncOutbox.add(operation);
+          contentDependencies.push(operation.operationId);
+        }
+      }
+
+      const tombstonedTree = { ...tree, deletedAt: now, deletedBy };
+      const treeOperation = operationFor('tree', tree, 'delete', null, contentDependencies);
+      await db.trees.put(tombstonedTree);
+      await db.syncOutbox.add(treeOperation);
+
+      for (const membership of await db.treeMemberships.toArray()) {
+        if (membership.treeId !== treeId || !isActive(membership)) continue;
+        const tombstoned = { ...membership, deletedAt: now, deletedBy };
+        const operation = operationFor('treeMembership', membership, 'delete', null, [treeOperation.operationId]);
+        await db.treeMemberships.put(tombstoned);
+        await db.syncOutbox.add(operation);
+      }
+
+      return { entity: tombstonedTree, operation: treeOperation };
+    },
+  );
+}

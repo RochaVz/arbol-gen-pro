@@ -235,7 +235,7 @@ Deno.serve(async (req) => {
     }
 
     if (operationType === 'create') {
-      const row: any = { id: entityId, server_version: newServerVersion, deleted_at: null, created_at: now, updated_at: now, ...stripMeta(payload) };
+      const row: any = { id: entityId, server_version: newServerVersion, deleted_at: null, deleted_by: null, created_at: now, updated_at: now, ...stripMeta(payload) };
       if (entityType === 'tree') {
         row.owner_id = userId;
         row.name = payload?.name ?? 'Sin nombre';
@@ -252,6 +252,7 @@ Deno.serve(async (req) => {
           updated_at: now,
           server_version: 1,
           deleted_at: null,
+          deleted_by: null,
         });
       }
     } else if (operationType === 'update') {
@@ -260,11 +261,13 @@ Deno.serve(async (req) => {
         server_version: newServerVersion,
         updated_at: now,
         deleted_at: null,
+        deleted_by: null,
       }).eq('id', entityId);
       if (error) throw error;
     } else if (operationType === 'delete') {
       const { error } = await admin.from(table).update({
         deleted_at: now,
+        deleted_by: userId,
         server_version: newServerVersion,
         updated_at: now,
       }).eq('id', entityId);
@@ -316,7 +319,7 @@ Deno.serve(async (req) => {
 
 function stripMeta(p: any): any {
   if (!p || typeof p !== 'object') return {};
-  const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, serverVersion: _serverVersion, localRevision: _localRevision, syncStatus: _syncStatus, deletedAt: _deletedAt, ...rest } = p;
+  const { id: _id, createdAt: _createdAt, updatedAt: _updatedAt, serverVersion: _serverVersion, localRevision: _localRevision, syncStatus: _syncStatus, deletedAt: _deletedAt, deletedBy: _deletedBy, ...rest } = p;
   const out: any = {};
   for (const [k, v] of Object.entries(rest)) {
     const snake = k.replace(/[A-Z]/g, (m) => '_' + m.toLowerCase());

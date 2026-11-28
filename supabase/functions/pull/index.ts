@@ -54,7 +54,16 @@ Deno.serve(async (req) => {
 
   // Árboles accesibles por el usuario.
   const { data: mems } = await admin.from('tree_memberships').select('tree_id').eq('user_id', userId).is('deleted_at', null);
-  const accessibleTrees = new Set((mems ?? []).map((m: any) => m.tree_id));
+  const membershipTreeIds = (mems ?? []).map((m: any) => m.tree_id);
+  const accessibleTrees = new Set<string>();
+  if (membershipTreeIds.length) {
+    const { data: activeMembershipTrees } = await admin
+      .from('trees')
+      .select('id')
+      .in('id', membershipTreeIds)
+      .is('deleted_at', null);
+    for (const tree of activeMembershipTrees ?? []) accessibleTrees.add(tree.id);
+  }
   // También los que posee.
   const { data: owned } = await admin.from('trees').select('id').eq('owner_id', userId).is('deleted_at', null);
   for (const t of owned ?? []) accessibleTrees.add(t.id);

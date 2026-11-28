@@ -23,7 +23,7 @@ interface PersonStoreActions {
   /** Actualizar una persona */
   updatePerson: (id: PersonId, updates: Partial<PersonNode>) => void;
   /** Eliminar una persona */
-  removePerson: (id: PersonId) => void;
+  removePerson: (id: PersonId, deletedBy?: PersonId) => void;
   /** Agregar una relación */
   addRelationship: (rel: { id: string; person1Id: PersonId; person2Id: PersonId; type: string; startDate?: number }) => void;
   /** Agregar un evento */
@@ -48,6 +48,8 @@ interface PersonNode {
   deathplace?: string;
   biography?: string;
   notes?: string;
+  deletedAt?: number | null;
+  deletedBy?: PersonId | null;
 }
 
 /** Store for managing genealogy persons.
@@ -73,9 +75,13 @@ export const usePersonStore = create<PersonStore>((set) => ({
         person.id === id ? { ...person, ...updates, updatedAt: Date.now() } : person
       ),
     })),
-  removePerson: (id) =>
+  removePerson: (id, deletedBy) =>
     set((state) => ({
-      persons: state.persons.filter((person) => person.id !== id),
+      persons: state.persons.map((person) =>
+        person.id === id
+          ? { ...person, deletedAt: Date.now(), deletedBy: deletedBy ?? null, updatedAt: Date.now() }
+          : person
+      ),
     })),
   addRelationship: (rel) =>
     set((state) => ({

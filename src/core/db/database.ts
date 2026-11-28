@@ -82,6 +82,31 @@ export class Database extends Dexie {
       await migrateLegacyIdentities(transaction);
     });
 
+    this.version(5).stores({
+      trees: 'id, ownerId, deletedAt',
+      persons: 'id, treeId, deletedAt',
+      relationships: 'id, treeId, deletedAt',
+      events: 'id, treeId, deletedAt',
+      photos: 'id, treeId, personId, deletedAt',
+      syncOutbox: 'operationId, status, [entityType+entityId], createdAt',
+      treeMemberships: 'id, treeId, userId',
+      treeInvitations: 'id, treeId',
+      photoBlobs: 'id, photoId, kind',
+      conflictSnapshots: 'operationId',
+      auditLog: 'id, treeId, entityType, action, createdAt',
+    }).upgrade(async (transaction) => {
+      for (const tableName of [
+        'trees', 'persons', 'relationships', 'events', 'photos',
+        'treeMemberships', 'treeInvitations', 'photoBlobs', 'auditLog',
+      ]) {
+        const table = transaction.table(tableName);
+        const rows = await table.toArray();
+        if (rows.length) {
+          await table.bulkPut(rows.map((row) => ({ ...row, deletedBy: row.deletedBy ?? null })));
+        }
+      }
+    });
+
     const entityTables: Array<Table<any, string>> = [
       this.trees, this.persons, this.relationships, this.events, this.photos,
       this.treeMemberships, this.treeInvitations, this.photoBlobs, this.auditLog
@@ -98,6 +123,7 @@ export class Database extends Dexie {
         obj.localRevision = (obj.localRevision ?? 0) + 1;
         obj.syncStatus = obj.syncStatus ?? 'pending';
         obj.deletedAt = obj.deletedAt ?? null;
+        obj.deletedBy = obj.deletedBy ?? null;
       });
       table.hook('updating', (mods: any, _primKey, obj: any) => {
         const now = Date.now();
