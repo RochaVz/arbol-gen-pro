@@ -67,11 +67,12 @@ Una aplicación de árbol genealógico familiar colaborativo que permite registr
 Consulte los siguientes documentos para detalles de arquitectura:
 
 - [ARCHITECTURE.md](ARCHITECTURE.md) - Visión general de la arquitectura
-- [DATA-MODEL.md](DATA-MODEL.md) - Modelo de datos y entidades
-- [SYNC-ARCHITECTURE.md](SYNC-ARCHITECTURE.md) - Sistema de sincronización offline-first
-- [ROADMAP.md](ROADMAP.md) - Plan de implementación por fases
+- [Índice de documentación](docs/DOCUMENTATION-INDEX.md) - Navegación histórica y técnica
+- [DATA-MODEL.md](docs/architecture/DATA-MODEL.md) - Modelo de datos y entidades
+- [SYNC-ARCHITECTURE.md](docs/architecture/SYNC-ARCHITECTURE.md) - Sistema de sincronización offline-first
+- [ROADMAP.md](docs/decisions/ROADMAP.md) - Plan histórico de implementación por fases
 - `STORAGE-STRATEGY.md` - Estrategia de almacenamiento de imágenes *(pendiente de escribir)*
-- `SECURITY.md` - Medidas de seguridad y privacidad *(pendiente de escribir)*
+- [SECURITY.md](SECURITY.md) - Medidas de seguridad y privacidad
 
 ## Licencia
 

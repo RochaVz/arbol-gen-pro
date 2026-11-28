@@ -89,7 +89,7 @@ interface BaseEntity {
 ### Operation Pattern (Sincronización)
 
 La cola local guarda operaciones, no eventos de dominio. Los nombres de campo son
-los mismos que en `DATA-MODEL.md` y `SYNC-ARCHITECTURE.md` §5.2.
+los mismos que en `docs/architecture/DATA-MODEL.md` y `docs/architecture/SYNC-ARCHITECTURE.md` §5.2.
 
 ```typescript
 interface SyncOperation {
@@ -131,7 +131,7 @@ interface SyncOperation {
 - **Estrategia**: *siempre manual*. El usuario compara su versión con la del servidor y decide
 - **Nunca Last-Write-Wins**: sobrescribir la versión del servidor automáticamente es incompatible con el principio P6
 - **No Auto-Merge**: Nunca se fusionan personas basándose solo en similitud
-- **Detalle completo**: `SYNC-ARCHITECTURE.md` §11
+- **Detalle completo**: `docs/architecture/SYNC-ARCHITECTURE.md` §11
 
 ## PWA y Offline-First
 
@@ -164,7 +164,7 @@ interface SyncOperation {
 *(Ver diagrama en README.md)*
 
 ### Flujo de Sincronización
-*(Ver SYNC-ARCHITECTURE.md)*
+*(Ver `docs/architecture/SYNC-ARCHITECTURE.md`)*
 
 ### Almacenamiento Local
 *(Ver STORAGE-STRATEGY.md)*

@@ -6,6 +6,15 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+build*.txt
+compile_output.txt
+tsc_output.txt
+test_output.txt
+output.txt
+errors.txt
+temp.txt
+test.txt
+log*.txt
 
 node_modules
 dist
@@ -35,3 +44,10 @@ dist-ssr
 .agents/
 .aider*
 .supabase-token
+
+# Temporary ad-hoc repair scripts and captured command output
+fix*.js
+fix*.cjs
+fix*.py
+fix*.ps1
+run_fixes.py

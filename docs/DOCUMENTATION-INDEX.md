@@ -5,13 +5,13 @@
 ### 👥 **For Decision Makers / Non-Technical**
 Start here if you want to know what was done and if it's ready to deploy.
 
-1. **[QUICK-REFERENCE.md](./QUICK-REFERENCE.md)** ⚡
+1. **[QUICK-REFERENCE.md](./reports/QUICK-REFERENCE.md)** ⚡
    - 1 page summary
    - 6 main improvements
    - Status: Ready to deploy
    - Time to read: 2 minutes
 
-2. **[DEPLOYMENT-READY.md](./DEPLOYMENT-READY.md)** 🚀
+2. **[DEPLOYMENT-READY.md](./reports/DEPLOYMENT-READY.md)** 🚀
    - Complete overview
    - What changed and why
    - Business value
@@ -23,21 +23,21 @@ Start here if you want to know what was done and if it's ready to deploy.
 ### 👨‍💻 **For Developers / Technical Team**
 Start here if you need to understand the implementation.
 
-1. **[CODE-CHANGES-SUMMARY.txt](./CODE-CHANGES-SUMMARY.txt)** 📝
+1. **[CODE-CHANGES-SUMMARY.txt](./reports/CODE-CHANGES-SUMMARY.txt)** 📝
    - File-by-file breakdown
    - Line-by-line changes
    - Build statistics
    - Testing results
    - Time to read: 10 minutes
 
-2. **[FASE-4-VISUAL-POLISH-SUMMARY.md](./FASE-4-VISUAL-POLISH-SUMMARY.md)** 🎨
+2. **[FASE-4-VISUAL-POLISH-SUMMARY.md](./phases/FASE-4-VISUAL-POLISH-SUMMARY.md)** 🎨
    - Design system architecture
    - Component improvements
    - Before/after comparisons
    - Technical specifications
    - Time to read: 15 minutes
 
-3. **[UI-IMPROVEMENTS-CHECKLIST.md](./UI-IMPROVEMENTS-CHECKLIST.md)** ✅
+3. **[UI-IMPROVEMENTS-CHECKLIST.md](./phases/UI-IMPROVEMENTS-CHECKLIST.md)** ✅
    - Detailed checklist
    - All components verified
    - Accessibility compliance
@@ -49,7 +49,7 @@ Start here if you need to understand the implementation.
 ### 📊 **For Project Managers / Product Owners**
 Start here if you need a comprehensive analysis.
 
-1. **[SESSION-FINAL-REPORT.md](./SESSION-FINAL-REPORT.md)** 📋
+1. **[SESSION-FINAL-REPORT.md](./reports/SESSION-FINAL-REPORT.md)** 📋
    - Executive summary
    - Metrics and analytics
    - Design system details
@@ -64,22 +64,22 @@ Start here if you need a comprehensive analysis.
 ### Want to know...
 
 **"What was done?"**
-→ Read [QUICK-REFERENCE.md](./QUICK-REFERENCE.md)
+→ Read [QUICK-REFERENCE.md](./reports/QUICK-REFERENCE.md)
 
 **"Is it ready to deploy?"**
-→ Read [DEPLOYMENT-READY.md](./DEPLOYMENT-READY.md)
+→ Read [DEPLOYMENT-READY.md](./reports/DEPLOYMENT-READY.md)
 
 **"What exactly changed in the code?"**
-→ Read [CODE-CHANGES-SUMMARY.txt](./CODE-CHANGES-SUMMARY.txt)
+→ Read [CODE-CHANGES-SUMMARY.txt](./reports/CODE-CHANGES-SUMMARY.txt)
 
 **"How will this look to users?"**
 → See the app at http://localhost:5173
 
 **"Will this break anything?"**
-→ Read [UI-IMPROVEMENTS-CHECKLIST.md](./UI-IMPROVEMENTS-CHECKLIST.md)
+→ Read [UI-IMPROVEMENTS-CHECKLIST.md](./phases/UI-IMPROVEMENTS-CHECKLIST.md)
 
 **"Give me all the details"**
-→ Read [SESSION-FINAL-REPORT.md](./SESSION-FINAL-REPORT.md)
+→ Read [SESSION-FINAL-REPORT.md](./reports/SESSION-FINAL-REPORT.md)
 
 ---
 
@@ -141,7 +141,7 @@ Start here if you need a comprehensive analysis.
 
 ### In This Session (5 new files)
 1. `QUICK-REFERENCE.md` - Quick overview
-2. `DEPLOYMENT-READY.md` - Deployment guide
+2. [`DEPLOYMENT-READY.md`](./reports/DEPLOYMENT-READY.md) - Deployment guide
 3. `CODE-CHANGES-SUMMARY.txt` - Technical breakdown
 4. `FASE-4-VISUAL-POLISH-SUMMARY.md` - Design analysis
 5. `UI-IMPROVEMENTS-CHECKLIST.md` - Verification checklist
@@ -159,8 +159,8 @@ Start here if you need a comprehensive analysis.
 ## 🚀 For Deployment
 
 ### Step 1: Review
-- Read [QUICK-REFERENCE.md](./QUICK-REFERENCE.md)
-- Review [DEPLOYMENT-READY.md](./DEPLOYMENT-READY.md)
+- Read [QUICK-REFERENCE.md](./reports/QUICK-REFERENCE.md)
+- Review [DEPLOYMENT-READY.md](./reports/DEPLOYMENT-READY.md)
 
 ### Step 2: Test
 ```bash
@@ -206,17 +206,17 @@ Before deploying, verify:
 
 ## 📞 Questions?
 
-**Quick question?** → [QUICK-REFERENCE.md](./QUICK-REFERENCE.md)
+**Quick question?** → [QUICK-REFERENCE.md](./reports/QUICK-REFERENCE.md)
 
-**How do we deploy?** → [DEPLOYMENT-READY.md](./DEPLOYMENT-READY.md)
+**How do we deploy?** → [DEPLOYMENT-READY.md](./reports/DEPLOYMENT-READY.md)
 
-**Show me the code changes** → [CODE-CHANGES-SUMMARY.txt](./CODE-CHANGES-SUMMARY.txt)
+**Show me the code changes** → [CODE-CHANGES-SUMMARY.txt](./reports/CODE-CHANGES-SUMMARY.txt)
 
-**Full technical details?** → [FASE-4-VISUAL-POLISH-SUMMARY.md](./FASE-4-VISUAL-POLISH-SUMMARY.md)
+**Full technical details?** → [FASE-4-VISUAL-POLISH-SUMMARY.md](./phases/FASE-4-VISUAL-POLISH-SUMMARY.md)
 
-**Is everything working?** → [UI-IMPROVEMENTS-CHECKLIST.md](./UI-IMPROVEMENTS-CHECKLIST.md)
+**Is everything working?** → [UI-IMPROVEMENTS-CHECKLIST.md](./phases/UI-IMPROVEMENTS-CHECKLIST.md)
 
-**Complete analysis?** → [SESSION-FINAL-REPORT.md](./SESSION-FINAL-REPORT.md)
+**Complete analysis?** → [SESSION-FINAL-REPORT.md](./reports/SESSION-FINAL-REPORT.md)
 
 ---
 

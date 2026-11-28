@@ -4,12 +4,12 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "lint": "oxlint",
-    "test": "vitest run --passWithNoTests",
-    "test:watch": "vitest",
-    "preview": "vite preview"
+    "dev": "vite --config config/vite.config.ts",
+    "build": "tsc -b config/tsconfig.json && vite build --config config/vite.config.ts",
+    "lint": "oxlint --config config/.oxlintrc.json",
+    "test": "vitest run --config config/vitest.config.ts --passWithNoTests",
+    "test:watch": "vitest --config config/vitest.config.ts",
+    "preview": "vite preview --config config/vite.config.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",
