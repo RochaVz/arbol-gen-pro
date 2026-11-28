@@ -5,6 +5,7 @@ import type {
 } from './schema';
 
 import { uuidv7 } from '../../shared/utils/uuid';
+import { assertEntityIdentities, assertOperationIdentities, migrateLegacyIdentities } from './identity';
 
 export class Database extends Dexie {
   declare trees: Table<Tree, string>;
@@ -65,16 +66,32 @@ export class Database extends Dexie {
       auditLog: 'id, treeId, entityType, action, createdAt',
     });
 
+    this.version(4).stores({
+      trees: 'id, ownerId, deletedAt',
+      persons: 'id, treeId, deletedAt',
+      relationships: 'id, treeId, deletedAt',
+      events: 'id, treeId, deletedAt',
+      photos: 'id, treeId, personId, deletedAt',
+      syncOutbox: 'operationId, status, [entityType+entityId], createdAt',
+      treeMemberships: 'id, treeId, userId',
+      treeInvitations: 'id, treeId',
+      photoBlobs: 'id, photoId, kind',
+      conflictSnapshots: 'operationId',
+      auditLog: 'id, treeId, entityType, action, createdAt',
+    }).upgrade(async (transaction) => {
+      await migrateLegacyIdentities(transaction);
+    });
 
     const entityTables: Array<Table<any, string>> = [
       this.trees, this.persons, this.relationships, this.events, this.photos,
-      this.treeMemberships, this.treeInvitations, this.photoBlobs
+      this.treeMemberships, this.treeInvitations, this.photoBlobs, this.auditLog
     ];
 
     for (const table of entityTables) {
       table.hook('creating', (_primKey, obj) => {
         const now = Date.now();
         if (!obj.id) obj.id = uuidv7();
+        assertEntityIdentities(obj);
         obj.createdAt = obj.createdAt ?? now;
         obj.updatedAt = now;
         obj.serverVersion = obj.serverVersion ?? 0;
@@ -84,6 +101,7 @@ export class Database extends Dexie {
       });
       table.hook('updating', (mods: any, _primKey, obj: any) => {
         const now = Date.now();
+        assertEntityIdentities({ ...obj, ...mods });
         return {
           ...mods,
           updatedAt: now,
@@ -92,6 +110,23 @@ export class Database extends Dexie {
         };
       });
     }
+
+    this.syncOutbox.hook('creating', (_primKey, operation) => {
+      assertOperationIdentities(operation);
+    });
+    this.syncOutbox.hook('updating', (mods, _primKey, operation) => {
+      assertOperationIdentities({ ...operation, ...mods });
+    });
+    this.conflictSnapshots.hook('creating', (_primKey, snapshot) => {
+      assertOperationIdentities({ operationId: snapshot.operationId, entityId: snapshot.operationId });
+    });
+    this.conflictSnapshots.hook('updating', (mods, _primKey, snapshot) => {
+      const changes = mods as { operationId?: string };
+      assertOperationIdentities({
+        operationId: changes.operationId ?? snapshot.operationId,
+        entityId: changes.operationId ?? snapshot.operationId,
+      });
+    });
   }
 }
 

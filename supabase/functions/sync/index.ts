@@ -15,6 +15,16 @@ const TABLE: Record<string, string> = {
   treeInvitation: 'tree_invitations',
 };
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const UUID_FIELDS = ['id', 'treeId', 'ownerId', 'personId', 'relativeId', 'person1Id', 'person2Id', 'eventId', 'photoId', 'userId', 'invitedBy', 'acceptedBy'];
+
+function hasValidPayloadIds(payload: any): boolean {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return true;
+  if (UUID_FIELDS.some((field) => payload[field] != null && !UUID_PATTERN.test(String(payload[field])))) return false;
+  if (payload.personIds != null && (!Array.isArray(payload.personIds) || payload.personIds.some((id: unknown) => !UUID_PATTERN.test(String(id))))) return false;
+  return true;
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, idempotency-key',
@@ -61,6 +71,9 @@ Deno.serve(async (req) => {
     return json({ status: 'failed', errorCode: 'session_expired' }, 401);
   }
   const userId = userData.user.id;
+  if (!UUID_PATTERN.test(userId)) {
+    return json({ status: 'failed', errorCode: 'invalid_user_identity' }, 500);
+  }
 
   let body: any;
   try {
@@ -78,6 +91,12 @@ Deno.serve(async (req) => {
 
   if (!operationId || !entityType || !entityId || !operationType) {
     return json({ operationId, status: 'failed', errorCode: 'invalid_payload' }, 400);
+  }
+  if (!UUID_PATTERN.test(String(operationId)) || !UUID_PATTERN.test(String(entityId))) {
+    return json({ operationId, status: 'failed', errorCode: 'invalid_uuid' }, 400);
+  }
+  if (!hasValidPayloadIds(payload)) {
+    return json({ operationId, status: 'failed', errorCode: 'invalid_payload_uuid' }, 400);
   }
   if (!TABLE[entityType]) {
     return json({ operationId, status: 'failed', errorCode: 'unknown_entity_type' }, 400);

@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { PremiumHome } from '../shared/components/PremiumHome';
 import { useAppStore } from '../store';
 import { treeRepository, personRepository, uuidv7 } from '../core/db';
+import { getCurrentUserId } from '../core/supabase';
 import { useToast } from '../shared/hooks/useToast';
 
 export function HomePage() {
@@ -15,8 +16,9 @@ export function HomePage() {
 
   const handleCreateTree = async (treeName: string, myName: string, myLastName: string) => {
     try {
+      const ownerId = await getCurrentUserId();
       const t = await treeRepository.create({
-        id: uuidv7(), name: treeName, ownerId: 'local-user',
+        id: uuidv7(), name: treeName, ownerId,
       } as any);
       await personRepository.create({
         id: uuidv7(), treeId: t.entity.id,

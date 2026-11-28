@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { db, PersonRepository } from '../core/db';
 import { uuidv7 } from '../shared/utils/uuid';
 
+const treeId = uuidv7();
+
 describe('repositories', () => {
   beforeEach(async () => {
     await db.persons.clear();
@@ -12,7 +14,7 @@ describe('repositories', () => {
     const repo = new PersonRepository();
     const p = {
       id: uuidv7(),
-      treeId: 't1',
+      treeId,
       firstName: 'Ana',
       lifeStatus: 'alive' as const,
       createdAt: 0, updatedAt: 0, serverVersion: 0, localRevision: 0, syncStatus: 'pending' as const, deletedAt: null
@@ -25,7 +27,7 @@ describe('repositories', () => {
 
   it('update increments and enqueues', async () => {
     const repo = new PersonRepository();
-    const p = { id: uuidv7(), treeId: 't1', firstName: 'Ana', lifeStatus: 'alive' as const, createdAt: 0, updatedAt: 0, serverVersion: 0, localRevision: 0, syncStatus: 'pending' as const, deletedAt: null };
+    const p = { id: uuidv7(), treeId, firstName: 'Ana', lifeStatus: 'alive' as const, createdAt: 0, updatedAt: 0, serverVersion: 0, localRevision: 0, syncStatus: 'pending' as const, deletedAt: null };
     await repo.create(p as any);
     await repo.update(p.id, { firstName: 'Anita' });
     const got = await db.persons.get(p.id);
@@ -35,7 +37,7 @@ describe('repositories', () => {
 
   it('delete tombstones', async () => {
     const repo = new PersonRepository();
-    const p = { id: uuidv7(), treeId: 't1', firstName: 'Ana', lifeStatus: 'alive' as const, createdAt: 0, updatedAt: 0, serverVersion: 0, localRevision: 0, syncStatus: 'pending' as const, deletedAt: null };
+    const p = { id: uuidv7(), treeId, firstName: 'Ana', lifeStatus: 'alive' as const, createdAt: 0, updatedAt: 0, serverVersion: 0, localRevision: 0, syncStatus: 'pending' as const, deletedAt: null };
     await repo.create(p as any);
     await repo.delete(p.id);
     const got = await db.persons.get(p.id);

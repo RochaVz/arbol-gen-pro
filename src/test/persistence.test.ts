@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { db, Database } from '../core/db';
 import { uuidv7 } from '../shared/utils/uuid';
 
+const treeId = uuidv7();
+
 async function clearAll() {
   await db.transaction('rw', [db.trees, db.persons, db.relationships, db.events, db.photos,
     db.syncOperations, db.treeMemberships, db.treeInvitations, db.photoBlobs], async () => {
@@ -30,7 +32,7 @@ describe('persistencia local (Fase 2)', () => {
   });
 
   it('incrementa localRevision y no toca serverVersion en create (hook)', async () => {
-    const id = await db.persons.add({ treeId: 't1', firstName: 'Ana', lifeStatus: 'alive' } as any);
+    const id = await db.persons.add({ treeId, firstName: 'Ana', lifeStatus: 'alive' } as any);
     const saved = await db.persons.get(id as string);
     expect(saved).toBeDefined();
     expect(saved!.localRevision).toBe(1);
@@ -40,7 +42,7 @@ describe('persistencia local (Fase 2)', () => {
   });
 
   it('incrementa localRevision en update (hook)', async () => {
-    const id = await db.persons.add({ treeId: 't1', firstName: 'Ana', lifeStatus: 'alive' } as any);
+    const id = await db.persons.add({ treeId, firstName: 'Ana', lifeStatus: 'alive' } as any);
     await db.persons.update(id as string, { firstName: 'Ana María' });
     const saved = await db.persons.get(id as string);
     expect(saved!.firstName).toBe('Ana María');
@@ -53,7 +55,7 @@ describe('persistencia local (Fase 2)', () => {
     await db.syncOperations.add({
       operationId: opId,
       entityType: 'person',
-      entityId: 'x',
+      entityId: uuidv7(),
       operationType: 'create',
       baseServerVersion: 0,
       payload: null,
@@ -67,7 +69,7 @@ describe('persistencia local (Fase 2)', () => {
     const personId = uuidv7();
     await expect(
       db.transaction('rw', db.persons, db.syncOperations, async () => {
-        await db.persons.add({ id: personId, treeId: 't1', firstName: 'Luis', lifeStatus: 'alive' } as any);
+        await db.persons.add({ id: personId, treeId, firstName: 'Luis', lifeStatus: 'alive' } as any);
         // fuerza fallo por PK duplicada en syncOutbox
         await db.syncOperations.add({
           operationId: opId,
@@ -91,13 +93,14 @@ describe('persistencia local (Fase 2)', () => {
 
   it('persistencia: una operación encolada sobrevive a la recreación del objeto Dexie', async () => {
     const opId = uuidv7();
+    const personId = uuidv7();
     await db.syncOperations.add({
       operationId: opId,
       entityType: 'person',
-      entityId: 'p1',
+      entityId: personId,
       operationType: 'create',
       baseServerVersion: 0,
-      payload: { id: 'p1' },
+      payload: { id: personId },
       createdAt: Date.now(),
       status: 'pending',
       retryCount: 0,
@@ -132,7 +135,7 @@ describe('persistencia local (Fase 2)', () => {
       {
         operationId: uuidv7(),
         entityType: 'tree',
-        entityId: 't1',
+        entityId: treeId,
         operationType: 'update',
         baseServerVersion: 1,
         payload: null,

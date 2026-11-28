@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { db } from '../core/db';
 import { listConflicts, resolveConflictKeepLocal, resolveConflictKeepServer } from '../core/sync';
+import { uuidv7 } from '../shared/utils/uuid';
 
 async function clearAll() {
   await db.transaction('rw', [db.trees, db.persons, db.photos, db.photoBlobs, db.syncOperations, db.conflictSnapshots], async () => {
@@ -20,11 +21,13 @@ describe('Fase 11 - resolucion manual de conflictos', () => {
   });
 
   it('listConflicts devuelve operaciones bloqueadas con snapshot', async () => {
-    const opId = 'op-1';
+    const opId = uuidv7();
+    const personId = uuidv7();
+    const treeId = uuidv7();
     await db.syncOperations.add({
       operationId: opId,
       entityType: 'person',
-      entityId: 'p1',
+      entityId: personId,
       operationType: 'update',
       baseServerVersion: 1,
       payload: { firstName: 'Local' },
@@ -35,7 +38,7 @@ describe('Fase 11 - resolucion manual de conflictos', () => {
       dependsOn: [],
     } as any);
     await db.conflictSnapshots.put({ operationId: opId, server: { first_name: 'Server', server_version: 2 }, createdAt: Date.now() });
-    await db.persons.add({ id: 'p1', treeId: 't1', firstName: 'Local', lifeStatus: 'alive', createdAt: Date.now(), updatedAt: Date.now(), serverVersion: 1, localRevision: 1, syncStatus: 'conflict', deletedAt: null } as any);
+    await db.persons.add({ id: personId, treeId, firstName: 'Local', lifeStatus: 'alive', createdAt: Date.now(), updatedAt: Date.now(), serverVersion: 1, localRevision: 1, syncStatus: 'conflict', deletedAt: null } as any);
 
     const conflicts = await listConflicts();
     expect(conflicts.length).toBe(1);
@@ -44,11 +47,13 @@ describe('Fase 11 - resolucion manual de conflictos', () => {
   });
 
   it('resolveConflictKeepLocal crea nueva operacion y no reenvía la original', async () => {
-    const opId = 'op-2';
+    const opId = uuidv7();
+    const personId = uuidv7();
+    const treeId = uuidv7();
     await db.syncOperations.add({
       operationId: opId,
       entityType: 'person',
-      entityId: 'p2',
+      entityId: personId,
       operationType: 'update',
       baseServerVersion: 1,
       payload: { firstName: 'Local' },
@@ -59,7 +64,7 @@ describe('Fase 11 - resolucion manual de conflictos', () => {
       dependsOn: [],
     } as any);
     await db.conflictSnapshots.put({ operationId: opId, server: { first_name: 'Server', server_version: 3 }, createdAt: Date.now() });
-    await db.persons.add({ id: 'p2', treeId: 't1', firstName: 'Local', lifeStatus: 'alive', createdAt: Date.now(), updatedAt: Date.now(), serverVersion: 1, localRevision: 2, syncStatus: 'conflict', deletedAt: null } as any);
+    await db.persons.add({ id: personId, treeId, firstName: 'Local', lifeStatus: 'alive', createdAt: Date.now(), updatedAt: Date.now(), serverVersion: 1, localRevision: 2, syncStatus: 'conflict', deletedAt: null } as any);
 
     const res = await resolveConflictKeepLocal(opId);
     expect(res.ok).toBe(true);
@@ -82,11 +87,13 @@ describe('Fase 11 - resolucion manual de conflictos', () => {
   });
 
   it('resolveConflictKeepServer aplica version del servidor y limpia conflicto', async () => {
-    const opId = 'op-3';
+    const opId = uuidv7();
+    const personId = uuidv7();
+    const treeId = uuidv7();
     await db.syncOperations.add({
       operationId: opId,
       entityType: 'person',
-      entityId: 'p3',
+      entityId: personId,
       operationType: 'update',
       baseServerVersion: 1,
       payload: { firstName: 'Local' },
@@ -96,13 +103,13 @@ describe('Fase 11 - resolucion manual de conflictos', () => {
       lastError: 'conflict',
       dependsOn: [],
     } as any);
-    await db.conflictSnapshots.put({ operationId: opId, server: { first_name: 'Server', server_version: 4, tree_id: 't1', life_status: 'alive', created_at: Date.now(), updated_at: Date.now(), deleted_at: null }, createdAt: Date.now() });
-    await db.persons.add({ id: 'p3', treeId: 't1', firstName: 'Local', lifeStatus: 'alive', createdAt: Date.now(), updatedAt: Date.now(), serverVersion: 1, localRevision: 2, syncStatus: 'conflict', deletedAt: null } as any);
+    await db.conflictSnapshots.put({ operationId: opId, server: { first_name: 'Server', server_version: 4, tree_id: treeId, life_status: 'alive', created_at: Date.now(), updated_at: Date.now(), deleted_at: null }, createdAt: Date.now() });
+    await db.persons.add({ id: personId, treeId, firstName: 'Local', lifeStatus: 'alive', createdAt: Date.now(), updatedAt: Date.now(), serverVersion: 1, localRevision: 2, syncStatus: 'conflict', deletedAt: null } as any);
 
     const res = await resolveConflictKeepServer(opId);
     expect(res.ok).toBe(true);
 
-    const person = await db.persons.get('p3');
+    const person = await db.persons.get(personId);
     expect(person?.firstName).toBe('Server');
     expect(person?.syncStatus).toBe('synced');
     expect(person?.serverVersion).toBe(4);

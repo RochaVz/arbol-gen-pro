@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { db } from '../core/db';
 import { savePhotoLocally, getPhotoBlobs, photoState, cleanupLocalBinaries, ensureStorageAvailable } from '../features/photo/services/photoStorage';
 import { compressPhoto, MAX_PHOTO_SIZE_BYTES } from '../features/photo/services/photoCompression';
+import { uuidv7 } from '../shared/utils/uuid';
 
 vi.mock('browser-image-compression', () => ({
   default: async (file: any) => file,
@@ -42,10 +43,10 @@ describe('Fase 9 - fotografias', () => {
   });
 
   it('savePhotoLocally guarda metadatos + 3 blobs y encola operacion', async () => {
-    const treeId = 't1';
-    await db.trees.add({ id: treeId, name: 'Arbol', ownerId: 'u', createdAt: Date.now(), updatedAt: Date.now(), serverVersion: 0, localRevision: 1, syncStatus: 'pending', deletedAt: null } as any);
+    const treeId = uuidv7();
+    await db.trees.add({ id: treeId, name: 'Arbol', ownerId: uuidv7(), createdAt: Date.now(), updatedAt: Date.now(), serverVersion: 0, localRevision: 1, syncStatus: 'pending', deletedAt: null } as any);
     const file = new File([new Uint8Array(100)], 'a.jpg', { type: 'image/jpeg' });
-    const res = await savePhotoLocally({ file, treeId, personId: 'p1' });
+    const res = await savePhotoLocally({ file, treeId, personId: uuidv7() });
     expect(res.photo).toBeDefined();
     expect(res.blobs.length).toBe(3);
     const blobs = await getPhotoBlobs(res.photo.id);
@@ -64,15 +65,15 @@ describe('Fase 9 - fotografias', () => {
   it('revierte los metadatos y la operación si falla el guardado de blobs', async () => {
     const bulkPut = vi.spyOn(db.photoBlobs, 'bulkPut').mockRejectedValueOnce(new Error('storage error'));
     const file = new File([new Uint8Array(10)], 'a.jpg', { type: 'image/jpeg' });
-    await expect(savePhotoLocally({ file, treeId: 't1' })).rejects.toThrow('storage error');
+    await expect(savePhotoLocally({ file, treeId: uuidv7() })).rejects.toThrow('storage error');
     expect(await db.photos.count()).toBe(0);
     expect(await db.syncOperations.count()).toBe(0);
     bulkPut.mockRestore();
   });
 
   it('cleanupLocalBinaries no borra si no esta registrado', async () => {
-    const treeId = 't2';
-    await db.trees.add({ id: treeId, name: 'Arbol', ownerId: 'u', createdAt: Date.now(), updatedAt: Date.now(), serverVersion: 0, localRevision: 1, syncStatus: 'pending', deletedAt: null } as any);
+    const treeId = uuidv7();
+    await db.trees.add({ id: treeId, name: 'Arbol', ownerId: uuidv7(), createdAt: Date.now(), updatedAt: Date.now(), serverVersion: 0, localRevision: 1, syncStatus: 'pending', deletedAt: null } as any);
     const file = new File([new Uint8Array(10)], 'a.jpg', { type: 'image/jpeg' });
     const res = await savePhotoLocally({ file, treeId });
     const r = await cleanupLocalBinaries(res.photo.id);

@@ -13,14 +13,15 @@ describe('cascade desvincular', () => {
   });
 
   it('orphans related entities', async () => {
+    const treeId = uuidv7();
     const pid = uuidv7();
-    await db.persons.add({ id: pid, treeId: 't', firstName: 'Ana', lifeStatus: 'alive', createdAt: 0, updatedAt: 0, serverVersion: 0, localRevision: 1, syncStatus: 'pending', deletedAt: null } as any);
+    await db.persons.add({ id: pid, treeId, firstName: 'Ana', lifeStatus: 'alive', createdAt: 0, updatedAt: 0, serverVersion: 0, localRevision: 1, syncStatus: 'pending', deletedAt: null } as any);
     const rid = uuidv7();
-    await db.relationships.add({ id: rid, treeId: 't', personId: pid, relativeId: 'other', type: 'parent', createdAt: 0, updatedAt: 0, serverVersion: 0, localRevision: 1, syncStatus: 'pending', deletedAt: null } as any);
+    await db.relationships.add({ id: rid, treeId, personId: pid, relativeId: uuidv7(), type: 'parent', createdAt: 0, updatedAt: 0, serverVersion: 0, localRevision: 1, syncStatus: 'pending', deletedAt: null } as any);
     const eid = uuidv7();
-    await db.events.add({ id: eid, treeId: 't', personId: pid, type: 'birth', createdAt: 0, updatedAt: 0, serverVersion: 0, localRevision: 1, syncStatus: 'pending', deletedAt: null } as any);
+    await db.events.add({ id: eid, treeId, personId: pid, type: 'birth', createdAt: 0, updatedAt: 0, serverVersion: 0, localRevision: 1, syncStatus: 'pending', deletedAt: null } as any);
     const phid = uuidv7();
-    await db.photos.add({ id: phid, treeId: 't', personId: pid, createdAt: 0, updatedAt: 0, serverVersion: 0, localRevision: 1, syncStatus: 'pending', deletedAt: null } as any);
+    await db.photos.add({ id: phid, treeId, personId: pid, createdAt: 0, updatedAt: 0, serverVersion: 0, localRevision: 1, syncStatus: 'pending', deletedAt: null } as any);
 
     await desvincularPerson(pid);
 

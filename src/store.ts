@@ -7,6 +7,7 @@ import {
   eventRepository,
   treeRepository,
   photoRepository,
+  uuidv7,
 } from './core/db';
 import { getPhotoBlobs } from './features/photo/services/photoStorage';
 import { db } from './core/sync';
@@ -75,7 +76,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       } as any);
       if (op.fatherId) {
         await relationshipRepository.create({
-          id: `${op.personId}-father`,
+          id: uuidv7(),
           treeId: get().activeTreeId || '',
           person1Id: op.fatherId,
           person2Id: op.personId,
@@ -87,7 +88,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       }
       if (op.motherId) {
         await relationshipRepository.create({
-          id: `${op.personId}-mother`,
+          id: uuidv7(),
           treeId: get().activeTreeId || '',
           person1Id: op.motherId,
           person2Id: op.personId,
@@ -114,7 +115,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       });
       set({ canUndo: historyService.canUndo(), canRedo: historyService.canRedo() });
       await personRepository.create({
-        id: op.childId || `child-${Date.now()}`,
+        id: op.childId || uuidv7(),
         treeId: get().activeTreeId || '',
         firstName: op.childName,
         lastName: op.childLastName || '',

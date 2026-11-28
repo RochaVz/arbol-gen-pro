@@ -6,6 +6,7 @@ import {
   type Person, type Relationship, type Event, type Photo,
 } from '../core/db';
 import { PersonProfileContainer } from '../features/person/PersonProfileContainer';
+import { uuidv7 } from '../shared/utils/uuid';
 
 vi.mock('browser-image-compression', () => ({ default: async (file: File) => file }));
 
@@ -13,7 +14,10 @@ const base = {
   createdAt: 1, updatedAt: 1, serverVersion: 0, localRevision: 0,
   syncStatus: 'pending' as const, deletedAt: null,
 };
-const person: Person = { ...base, id: 'p1', treeId: 't1', firstName: 'Ana', lifeStatus: 'alive' };
+const treeId = uuidv7();
+const personId = uuidv7();
+const ownerId = uuidv7();
+const person: Person = { ...base, id: personId, treeId, firstName: 'Ana', lifeStatus: 'alive' };
 
 function Profile() {
   const [persons, setPersons] = useState<Person[]>([person]);
@@ -26,7 +30,7 @@ function Profile() {
     setEvents(await eventRepository.list());
     setPhotos(await photoRepository.list());
   };
-  return <PersonProfileContainer personId="p1" persons={persons} relationships={relationships}
+  return <PersonProfileContainer personId={personId} persons={persons} relationships={relationships}
     events={events} photos={photos} onSelectPerson={() => {}} onBack={() => {}} onRefresh={refresh} />;
 }
 
@@ -35,7 +39,7 @@ beforeEach(async () => {
     await Promise.all([db.trees.clear(), db.persons.clear(), db.relationships.clear(), db.events.clear(),
       db.photos.clear(), db.photoBlobs.clear(), db.syncOperations.clear()]);
   });
-  await treeRepository.create({ ...base, id: 't1', name: 'Familia', ownerId: 'owner' });
+  await treeRepository.create({ ...base, id: treeId, name: 'Familia', ownerId });
   await personRepository.create(person);
   vi.stubGlobal('URL', Object.assign(class extends URL {}, {
     createObjectURL: vi.fn(() => 'blob:test'),
@@ -93,7 +97,7 @@ describe('person profile actions', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
     await screen.findByText('Reunión');
     expect((await eventRepository.list())[0]).toMatchObject({
-      personId: 'p1', title: 'Reunión', date: { year: 2026, month: 3, day: 15 },
+      personId, title: 'Reunión', date: { year: 2026, month: 3, day: 15 },
     });
 
     fireEvent.change(screen.getByLabelText('Seleccionar foto'), {
@@ -101,7 +105,7 @@ describe('person profile actions', () => {
     });
     await waitFor(() => expect(screen.getByAltText('Foto 1')).toBeTruthy());
     const [photo] = await photoRepository.list();
-    expect(photo.personId).toBe('p1');
+    expect(photo.personId).toBe(personId);
     expect(await db.photoBlobs.where('photoId').equals(photo.id).count()).toBe(3);
   });
 });

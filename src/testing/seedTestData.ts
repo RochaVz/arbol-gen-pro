@@ -18,7 +18,7 @@ export interface TestDataSet {
  */
 export function createSampleFamilyTree(): TestDataSet {
   const treeId = uuidv7();
-  const ownerId = 'test-user-local';
+  const ownerId = uuidv7();
 
   // Create tree
   const tree: Tree = {

@@ -1,6 +1,7 @@
 import { db } from './database';
 import type { SyncOperation } from './schema';
 import { uuidv7 } from '../../shared/utils/uuid';
+import { assertEntityIdentities, assertOperationIdentities } from './identity';
 
 export function calculateBaseServerVersion(
   operationType: 'create' | 'update' | 'delete',
@@ -19,6 +20,8 @@ export async function writeEntityWithOperation(
   entity: any,
   operation: SyncOperation
 ): Promise<void> {
+  assertEntityIdentities(entity);
+  assertOperationIdentities(operation);
   await db.transaction('rw', entityTable, db.syncOperations, async () => {
     await entityTable.put(entity);
     await db.syncOperations.add(operation);
@@ -26,6 +29,7 @@ export async function writeEntityWithOperation(
 }
 
 export async function enqueueOperation(operation: SyncOperation): Promise<void> {
+  assertOperationIdentities(operation);
   await db.syncOperations.add(operation);
 }
 
@@ -50,6 +54,7 @@ export async function writeLocal(
     payload?: Record<string, unknown> | null;
   }
 ): Promise<{ entity: any; operation: SyncOperation }> {
+  assertEntityIdentities(entity);
   const operation: SyncOperation = {
     operationId: uuidv7(),
     entityType: params.entityType,
@@ -63,6 +68,7 @@ export async function writeLocal(
     lastError: null,
     dependsOn: params.dependsOn ?? []
   };
+  assertOperationIdentities(operation);
   await db.transaction('rw', entityTable, db.syncOperations, async () => {
     await entityTable.put(entity);
     await db.syncOperations.add(operation);
